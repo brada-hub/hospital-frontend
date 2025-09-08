@@ -23,6 +23,13 @@ const routes = [
         meta: { requiresAuth: true },
       },
       {
+        path: '/gestion-hospital',
+        name: 'gestion-hospital',
+        component: () => import('pages/PageHospital.vue'),
+        meta: { requiresAuth: true },
+      },
+
+      {
         path: 'pacientes',
         name: 'pacientes',
         component: () => import('pages/PagePacientes.vue'),
