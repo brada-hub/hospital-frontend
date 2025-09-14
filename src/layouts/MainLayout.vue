@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="hHh lpR fFf" class="main-layout">
+  <q-layout view="lHh Lpr fFf" class="main-layout">
     <!-- Drawer (sidebar) -->
     <q-drawer v-model="drawer" show-if-above bordered class="elegant-drawer" :width="280">
       <!-- Header del drawer -->
