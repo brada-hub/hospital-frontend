@@ -148,7 +148,7 @@
 
         <q-tab-panels v-model="activeTab" animated>
           <q-tab-panel name="especialidades" class="q-pa-none">
-            <EspecialidadesComponent />
+            <EspecialidadesComponent :hospital-id="hospital.id" />
           </q-tab-panel>
 
           <q-tab-panel name="salas" class="q-pa-none">

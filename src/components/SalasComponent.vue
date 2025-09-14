@@ -1,647 +1,393 @@
 <template>
-  <div class="salas-container">
-    <!-- Vista Lista de Salas -->
-    <div v-if="!showSalaDetail" class="salas-list-view">
-      <!-- Header -->
-      <div class="salas-header">
-        <div class="row items-center justify-between q-pa-lg">
-          <div class="col-auto">
-            <h5 class="section-title">Salas y Camas</h5>
-            <p class="section-subtitle">Gestiona las salas y camas del hospital</p>
-          </div>
-          <div class="col-auto">
-            <q-btn
-              label="Añadir Sala"
-              color="primary"
-              icon="add"
-              @click="showAddSalaModal = true"
-              class="add-button"
-            />
-          </div>
-        </div>
+  <div class="salas-content q-pa-lg">
+    <!-- Botón añadir sala -->
+    <div class="q-mb-md">
+      <q-btn label="Añadir Sala" color="primary" @click="abrirModalSala()" />
+    </div>
+
+    <!-- Listado de salas -->
+    <div class="row q-col-gutter-md">
+      <div v-for="sala in salas" :key="sala.id" class="col-12 col-md-6 col-lg-4">
+        <q-card class="sala-card" flat bordered>
+          <q-card-section @click="verDetalleSala(sala)">
+            <div class="flex items-center justify-between">
+              <h6>{{ sala.nombre }}</h6>
+              <q-chip :color="getSalaStatusColor(sala)" text-color="white" size="sm">
+                {{ getSalaStatus(sala) }}
+              </q-chip>
+            </div>
+            <p>{{ sala.descripcion }}</p>
+            <div><b>Tipo:</b> {{ sala.tipo || 'N/A' }}</div>
+            <div><b>Especialidad:</b> {{ sala.especialidad?.nombre || 'Ninguna' }}</div>
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn flat icon="edit" @click="abrirModalSala(sala)" />
+            <q-btn flat icon="delete" color="negative" @click="eliminarSala(sala.id)" />
+          </q-card-actions>
+        </q-card>
       </div>
+    </div>
 
-      <!-- Contenido de Salas -->
-      <div class="salas-content q-pa-lg">
-        <div v-for="piso in pisos" :key="piso.nombre" class="piso-section q-mb-xl">
-          <h6 class="piso-title">{{ piso.nombre }}</h6>
-          <div class="row q-col-gutter-md">
-            <div v-for="sala in piso.salas" :key="sala.id" class="col-12 col-md-6 col-lg-4">
-              <q-card class="sala-card" flat bordered @click="verDetalleSala(sala)">
-                <q-card-section class="q-pa-md">
-                  <div class="flex items-center justify-between q-mb-sm">
-                    <div class="flex items-center">
-                      <q-icon name="bed" size="24px" color="primary" class="q-mr-sm" />
-                      <h6 class="sala-title">{{ sala.nombre }}</h6>
-                    </div>
-                    <q-chip :color="getSalaStatusColor(sala)" text-color="white" size="sm">
-                      {{ getSalaStatus(sala) }}
-                    </q-chip>
-                  </div>
+    <!-- Detalle sala -->
+    <div v-if="selectedSala" class="detalle-sala q-mt-lg">
+      <q-card flat bordered>
+        <q-card-section>
+          <div class="text-h6">{{ selectedSala.nombre }}</div>
+          <div class="text-subtitle2">
+            Tipo: {{ selectedSala.tipo || 'N/A' }} | Estado: {{ selectedSala.estado }}
+          </div>
+          <div class="text-caption">
+            Especialidad: {{ selectedSala.especialidad?.nombre || 'Ninguna' }}
+          </div>
+        </q-card-section>
 
-                  <p class="sala-description">{{ sala.descripcion }}</p>
-
-                  <div class="sala-stats q-mt-md">
-                    <div class="row q-col-gutter-sm">
-                      <div class="col-6">
-                        <div class="stat-item">
-                          <span class="stat-number">{{ sala.camas.length }}</span>
-                          <span class="stat-label">Total Camas</span>
-                        </div>
-                      </div>
-                      <div class="col-6">
-                        <div class="stat-item">
-                          <span class="stat-number text-positive">{{
-                            getCamasDisponibles(sala)
-                          }}</span>
-                          <span class="stat-label">Disponibles</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+        <q-card-section>
+          <div class="row q-col-gutter-sm">
+            <div v-for="cama in selectedSala.camas || []" :key="cama.id" class="col-6 col-md-4">
+              <q-card :class="getCamaCardClass(cama.estado)" flat bordered>
+                <q-card-section class="flex items-center justify-between">
+                  <div>{{ cama.nombre }} ({{ cama.tipo }})</div>
+                  <q-icon name="bed" :color="getCamaIconColor(cama.estado)" />
                 </q-card-section>
+                <q-card-actions align="right">
+                  <q-btn flat icon="edit" @click="abrirModalCama(cama)" />
+                  <q-btn flat icon="delete" color="negative" @click="eliminarCama(cama.id)" />
+                </q-card-actions>
               </q-card>
             </div>
           </div>
-        </div>
+        </q-card-section>
 
-        <!-- Estado vacío -->
-        <div v-if="pisos.length === 0" class="empty-state">
-          <q-icon name="bed" size="64px" color="grey-4" />
-          <h6 class="text-grey-6 q-mt-md">No hay salas registradas</h6>
-          <p class="text-grey-5">Comienza agregando la primera sala</p>
-          <q-btn
-            label="Añadir Primera Sala"
-            color="primary"
-            @click="showAddSalaModal = true"
-            class="q-mt-md"
-          />
-        </div>
-      </div>
+        <q-card-actions align="right">
+          <q-btn flat label="Cerrar" color="primary" @click="selectedSala = null" />
+          <q-btn flat label="Añadir cama" color="secondary" @click="abrirModalCama()" />
+        </q-card-actions>
+      </q-card>
     </div>
 
-    <!-- Vista Detalle de Sala -->
-    <div v-else class="sala-detail-view">
-      <!-- Header del detalle -->
-      <div class="detail-header">
-        <div class="row items-center justify-between q-pa-lg">
-          <div class="col-auto">
-            <q-btn
-              flat
-              icon="arrow_back"
-              label="Volver a Salas"
-              @click="showSalaDetail = false"
-              class="q-mb-sm"
-            />
-            <h5 class="section-title">{{ selectedSala?.nombre }}</h5>
-            <p class="section-subtitle">{{ selectedSala?.descripcion }}</p>
-          </div>
-          <div class="col-auto">
-            <q-btn
-              label="Añadir Cama"
-              color="secondary"
-              icon="add"
-              @click="showAddCamaModal = true"
-              class="add-button"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- Grid de Camas -->
-      <div class="camas-content q-pa-lg">
-        <div class="row q-col-gutter-md">
-          <div
-            v-for="cama in selectedSala?.camas"
-            :key="cama.id"
-            class="col-12 col-sm-6 col-md-4 col-lg-3"
-          >
-            <q-card :class="['cama-card', getCamaCardClass(cama.estado)]" flat bordered>
-              <q-card-section class="text-center q-pa-md">
-                <q-icon
-                  name="bed"
-                  size="32px"
-                  :color="getCamaIconColor(cama.estado)"
-                  class="q-mb-sm"
-                />
-                <h6 class="cama-id">{{ cama.id }}</h6>
-                <q-chip
-                  :color="getCamaStatusColor(cama.estado)"
-                  text-color="white"
-                  size="sm"
-                  class="q-mb-sm"
-                >
-                  {{ cama.estado }}
-                </q-chip>
-
-                <!-- Información del paciente si está ocupada -->
-                <div v-if="cama.estado === 'Ocupado' && cama.paciente" class="paciente-info">
-                  <q-separator class="q-my-sm" />
-                  <p class="paciente-nombre">{{ cama.paciente }}</p>
-                  <p class="paciente-ci">CI: {{ cama.ci }}</p>
-                </div>
-              </q-card-section>
-
-              <q-card-actions align="center" class="q-pa-sm">
-                <q-btn flat size="sm" icon="edit" @click="editCama(cama)"> Editar </q-btn>
-              </q-card-actions>
-            </q-card>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal Añadir Sala -->
+    <!-- Modal Sala -->
     <q-dialog v-model="showAddSalaModal" persistent>
       <q-card style="min-width: 400px">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Nueva Sala</div>
-          <q-space />
-          <q-btn icon="close" flat round dense @click="closeAddSalaModal" />
-        </q-card-section>
-
         <q-card-section>
-          <q-form @submit="saveSala" class="q-gutter-md">
-            <q-input
-              v-model="salaForm.nombre"
-              label="Nombre de la Sala"
-              filled
-              :rules="[(val) => !!val || 'El nombre es requerido']"
-            />
-
-            <q-input
-              v-model="salaForm.descripcion"
-              label="Descripción"
-              filled
-              :rules="[(val) => !!val || 'La descripción es requerida']"
-            />
-
-            <q-input
-              v-model="salaForm.piso"
-              label="Piso/Ala"
-              filled
-              :rules="[(val) => !!val || 'El piso es requerido']"
-            />
-
-            <q-input
-              v-model.number="salaForm.capacidad"
-              label="Capacidad de Camas"
-              type="number"
-              filled
-              min="1"
-              :rules="[(val) => val > 0 || 'Debe ser mayor a 0']"
-            />
-
-            <div class="row justify-end q-gutter-sm q-mt-md">
-              <q-btn label="Cancelar" color="grey" flat @click="closeAddSalaModal" />
-              <q-btn label="Guardar" color="primary" type="submit" :loading="saving" />
-            </div>
-          </q-form>
+          <div class="text-h6">{{ editingSala ? 'Editar Sala' : 'Añadir Sala' }}</div>
         </q-card-section>
+        <q-card-section>
+          <q-input v-model="salaForm.nombre" label="Nombre" outlined dense class="q-mb-sm" />
+          <q-input
+            v-model="salaForm.descripcion"
+            label="Descripción"
+            outlined
+            dense
+            class="q-mb-sm"
+          />
+          <q-input v-model="salaForm.tipo" label="Tipo de sala" outlined dense class="q-mb-sm" />
+          <q-select
+            v-model="salaForm.estado"
+            :options="['Activa', 'Inactiva']"
+            label="Estado"
+            outlined
+            dense
+            class="q-mb-sm"
+          />
+          <q-select
+            v-model="salaForm.especialidad_id"
+            :options="especialidadOptions"
+            option-label="nombre"
+            option-value="id"
+            label="Especialidad"
+            outlined
+            dense
+            class="q-mb-sm"
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancelar" color="negative" @click="closeAddSalaModal" />
+          <q-btn
+            flat
+            label="Guardar"
+            color="positive"
+            :loading="saving"
+            @click="editingSala ? updateSala() : saveSala()"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
 
-    <!-- Modal Añadir Cama -->
+    <!-- Modal Cama -->
     <q-dialog v-model="showAddCamaModal" persistent>
       <q-card style="min-width: 400px">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Nueva Cama - {{ selectedSala?.nombre }}</div>
-          <q-space />
-          <q-btn icon="close" flat round dense @click="closeAddCamaModal" />
-        </q-card-section>
-
         <q-card-section>
-          <q-form @submit="saveCama" class="q-gutter-md">
-            <q-input
-              v-model="camaForm.id"
-              label="ID de la Cama"
-              filled
-              :rules="[(val) => !!val || 'El ID es requerido']"
-            />
-
-            <q-select
-              v-model="camaForm.estado"
-              :options="estadosCama"
-              label="Estado"
-              filled
-              :rules="[(val) => !!val || 'El estado es requerido']"
-            />
-
-            <div class="row justify-end q-gutter-sm q-mt-md">
-              <q-btn label="Cancelar" color="grey" flat @click="closeAddCamaModal" />
-              <q-btn label="Guardar" color="secondary" type="submit" :loading="saving" />
-            </div>
-          </q-form>
+          <div class="text-h6">{{ editingCama ? 'Editar Cama' : 'Añadir Cama' }}</div>
         </q-card-section>
+        <q-card-section>
+          <q-input
+            v-model="camaForm.nombre"
+            label="Nombre de cama"
+            outlined
+            dense
+            class="q-mb-sm"
+          />
+          <q-select
+            v-model="camaForm.tipo"
+            :options="tiposCama"
+            label="Tipo de cama"
+            outlined
+            dense
+            class="q-mb-sm"
+          />
+          <q-select
+            v-model="camaForm.estado"
+            :options="estadosCama"
+            label="Estado"
+            outlined
+            dense
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancelar" color="negative" @click="closeAddCamaModal" />
+          <q-btn
+            flat
+            label="Guardar"
+            color="positive"
+            :loading="saving"
+            @click="editingCama ? updateCama() : saveCama()"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { api } from 'boot/axios'
 
 const $q = useQuasar()
 
-// Estado reactivo
-const showSalaDetail = ref(false)
-const selectedSala = ref(null)
+// Estados
 const showAddSalaModal = ref(false)
 const showAddCamaModal = ref(false)
+const selectedSala = ref(null)
 const saving = ref(false)
+const editingSala = ref(false)
+const editingCama = ref(false)
 
+// Opciones
 const estadosCama = ['Disponible', 'Ocupado', 'Mantenimiento']
+const tiposCama = [
+  'Rígida',
+  'Articulada manual',
+  'Articulada eléctrica',
+  'Bariátrica',
+  'Levitación',
+]
 
-const pisos = ref([
-  {
-    nombre: 'Piso 1 - Cardiología',
-    salas: [
-      {
-        id: '101',
-        nombre: 'Sala 101',
-        descripcion: 'Ala de Cardiología',
-        camas: [
-          { id: '101-A', estado: 'Disponible' },
-          { id: '101-B', estado: 'Ocupado', paciente: 'Ana Gómez', ci: '1234567 LP' },
-          { id: '101-C', estado: 'Mantenimiento' },
-        ],
-      },
-      {
-        id: '102',
-        nombre: 'Sala 102',
-        descripcion: 'Ala de Cardiología',
-        camas: [
-          { id: '102-A', estado: 'Disponible' },
-          { id: '102-B', estado: 'Disponible' },
-          { id: '102-C', estado: 'Ocupado', paciente: 'Juan Pérez', ci: '9876543 SC' },
-          { id: '102-D', estado: 'Ocupado', paciente: 'Maria Luna', ci: '4567891 CB' },
-          { id: '102-E', estado: 'Ocupado', paciente: 'Carlos Soliz', ci: '7891234 OR' },
-        ],
-      },
-    ],
-  },
-  {
-    nombre: 'Piso 2 - Neurología',
-    salas: [
-      {
-        id: '205',
-        nombre: 'Sala 205',
-        descripción: 'Ala de Neurología',
-        camas: [
-          { id: '205-A', estado: 'Ocupado', paciente: 'Luisa Méndez', ci: '3216549 PT' },
-          { id: '205-B', estado: 'Ocupado', paciente: 'Mario Durán', ci: '6549873 TJ' },
-        ],
-      },
-    ],
-  },
-])
+// Datos
+const salas = ref([])
+const especialidadOptions = ref([])
 
+// Formularios
 const salaForm = reactive({
   nombre: '',
   descripcion: '',
-  piso: '',
-  capacidad: 1,
+  tipo: '',
+  estado: '',
+  especialidad_id: null,
 })
+const camaForm = reactive({ id: null, nombre: '', tipo: 'Rígida', estado: 'Disponible' })
 
-const camaForm = reactive({
-  id: '',
-  estado: 'Disponible',
-})
-
-// Métodos
-const getCamasDisponibles = (sala) => {
-  return sala.camas.filter((cama) => cama.estado === 'Disponible').length
-}
-
-const getSalaStatus = (sala) => {
-  const disponibles = getCamasDisponibles(sala)
-  const total = sala.camas.length
-
-  if (disponibles === 0) return 'Completa'
-  if (disponibles === total) return 'Disponible'
-  return 'Parcial'
-}
-
-const getSalaStatusColor = (sala) => {
-  const status = getSalaStatus(sala)
-  const colors = {
-    Completa: 'negative',
-    Parcial: 'warning',
-    Disponible: 'positive',
+// Fetch inicial
+const fetchSalas = async () => {
+  try {
+    const res = await api.get('/salas')
+    salas.value = res.data
+  } catch (err) {
+    console.error(err)
+    $q.notify({ type: 'negative', message: 'Error al cargar salas' })
   }
-  return colors[status] || 'grey'
 }
-
-const getCamaStatusColor = (estado) => {
-  const colors = {
-    Disponible: 'positive',
-    Ocupado: 'negative',
-    Mantenimiento: 'warning',
+const fetchEspecialidades = async () => {
+  try {
+    const res = await api.get('/especialidades')
+    especialidadOptions.value = res.data
+  } catch (err) {
+    console.error(err)
+    $q.notify({ type: 'negative', message: 'Error al cargar especialidades' })
   }
-  return colors[estado] || 'grey'
 }
 
-const getCamaIconColor = (estado) => {
-  const colors = {
-    Disponible: 'positive',
-    Ocupado: 'negative',
-    Mantenimiento: 'warning',
-  }
-  return colors[estado] || 'grey'
-}
-
-const getCamaCardClass = (estado) => {
-  const classes = {
-    Disponible: 'cama-disponible',
-    Ocupado: 'cama-ocupada',
-    Mantenimiento: 'cama-mantenimiento',
-  }
-  return classes[estado] || ''
-}
-
-const verDetalleSala = (sala) => {
-  selectedSala.value = sala
-  showSalaDetail.value = true
-}
-
-const editCama = (cama) => {
-  // Implementar edición de cama
-  $q.notify({
-    type: 'info',
-    message: `Editando cama ${cama.id}`,
-    position: 'top-right',
-  })
-}
-
+// Guardar sala
 const saveSala = async () => {
   saving.value = true
-
   try {
-    // Crear camas automáticamente
-    const camas = []
-    for (let i = 1; i <= salaForm.capacidad; i++) {
-      camas.push({
-        id: `${salaForm.nombre.replace(/\s+/g, '')}-${String.fromCharCode(64 + i)}`,
-        estado: 'Disponible',
-      })
-    }
-
-    const nuevaSala = {
-      id: Date.now().toString(),
-      nombre: salaForm.nombre,
-      descripcion: salaForm.descripcion,
-      camas: camas,
-    }
-
-    // Buscar o crear el piso
-    let piso = pisos.value.find((p) => p.nombre.includes(salaForm.piso))
-    if (!piso) {
-      piso = {
-        nombre: salaForm.piso,
-        salas: [],
-      }
-      pisos.value.push(piso)
-    }
-
-    piso.salas.push(nuevaSala)
-
-    $q.notify({
-      type: 'positive',
-      message: 'Sala creada correctamente',
-      position: 'top-right',
-      icon: 'check_circle',
-    })
-
+    const res = await api.post('/salas', { ...salaForm })
+    salas.value.push(res.data)
+    $q.notify({ type: 'positive', message: 'Sala creada' })
     closeAddSalaModal()
-  } catch {
-    $q.notify({
-      type: 'negative',
-      message: 'Error al crear la sala',
-      position: 'top-right',
-      icon: 'error',
-    })
+  } catch (err) {
+    console.error(err)
+    $q.notify({ type: 'negative', message: 'Error' })
   } finally {
     saving.value = false
   }
 }
 
-const saveCama = async () => {
+// Actualizar sala
+const updateSala = async () => {
   saving.value = true
-
   try {
-    selectedSala.value.camas.push({
-      id: camaForm.id,
-      estado: camaForm.estado,
-    })
-
-    $q.notify({
-      type: 'positive',
-      message: 'Cama añadida correctamente',
-      position: 'top-right',
-      icon: 'check_circle',
-    })
-
-    closeAddCamaModal()
-  } catch {
-    $q.notify({
-      type: 'negative',
-      message: 'Error al añadir la cama',
-      position: 'top-right',
-      icon: 'error',
-    })
+    const res = await api.put(`/salas/${salaForm.id}`, { ...salaForm })
+    const index = salas.value.findIndex((s) => s.id === salaForm.id)
+    if (index !== -1) salas.value[index] = res.data
+    $q.notify({ type: 'positive', message: 'Sala actualizada' })
+    closeAddSalaModal()
+  } catch (err) {
+    console.error(err)
+    $q.notify({ type: 'negative', message: 'Error' })
   } finally {
     saving.value = false
   }
 }
 
-const closeAddSalaModal = () => {
-  showAddSalaModal.value = false
-  salaForm.nombre = ''
-  salaForm.descripcion = ''
-  salaForm.piso = ''
-  salaForm.capacidad = 1
+// Guardar cama
+const saveCama = async () => {
+  if (!selectedSala.value) return
+  saving.value = true
+  try {
+    const res = await api.post('/camas', { ...camaForm, sala_id: selectedSala.value.id })
+    selectedSala.value.camas = selectedSala.value.camas || []
+    selectedSala.value.camas.push(res.data)
+    $q.notify({ type: 'positive', message: 'Cama añadida' })
+    closeAddCamaModal()
+  } catch (err) {
+    console.error(err)
+    $q.notify({ type: 'negative', message: 'Error' })
+  } finally {
+    saving.value = false
+  }
 }
 
-const closeAddCamaModal = () => {
-  showAddCamaModal.value = false
-  camaForm.id = ''
-  camaForm.estado = 'Disponible'
+// Actualizar cama
+const updateCama = async () => {
+  saving.value = true
+  try {
+    const res = await api.put(`/camas/${camaForm.id}`, { ...camaForm })
+    const index = selectedSala.value.camas.findIndex((c) => c.id === camaForm.id)
+    if (index !== -1) selectedSala.value.camas[index] = res.data
+    $q.notify({ type: 'positive', message: 'Cama actualizada' })
+    closeAddCamaModal()
+  } catch (err) {
+    console.error(err)
+    $q.notify({ type: 'negative', message: 'Error' })
+  } finally {
+    saving.value = false
+  }
 }
+
+// Abrir modales
+const abrirModalSala = (sala = null) => {
+  if (sala) {
+    editingSala.value = true
+    Object.assign(salaForm, sala)
+  } else {
+    editingSala.value = false
+    Object.assign(salaForm, {
+      nombre: '',
+      descripcion: '',
+      tipo: '',
+      estado: '',
+      especialidad_id: null,
+    })
+  }
+  showAddSalaModal.value = true
+}
+const abrirModalCama = (cama = null) => {
+  if (cama) {
+    editingCama.value = true
+    Object.assign(camaForm, cama)
+  } else {
+    editingCama.value = false
+    Object.assign(camaForm, { id: null, nombre: '', tipo: 'Rígida', estado: 'Disponible' })
+  }
+  showAddCamaModal.value = true
+}
+const closeAddSalaModal = () => (showAddSalaModal.value = false)
+const closeAddCamaModal = () => (showAddCamaModal.value = false)
+
+// Ver detalle sala
+const verDetalleSala = async (sala) => {
+  try {
+    const res = await api.get(`/salas/${sala.id}`)
+    selectedSala.value = res.data
+  } catch (err) {
+    console.error(err)
+    $q.notify({ type: 'negative', message: 'Error' })
+  }
+}
+
+// Eliminar
+const eliminarSala = async (id) => {
+  if (!confirm('Eliminar sala?')) return
+  try {
+    await api.delete(`/salas/${id}`)
+    salas.value = salas.value.filter((s) => s.id !== id)
+  } catch (err) {
+    console.error(err)
+  }
+}
+const eliminarCama = async (id) => {
+  if (!confirm('Eliminar cama?')) return
+  try {
+    await api.delete(`/camas/${id}`)
+    selectedSala.value.camas = selectedSala.value.camas.filter((c) => c.id !== id)
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// Utilidades
+const getCamasDisponibles = (sala) =>
+  sala.camas?.filter((c) => c.estado === 'Disponible').length || 0
+const getSalaStatus = (sala) => {
+  const d = getCamasDisponibles(sala)
+  const t = sala.camas?.length || 0
+  if (d === 0) return 'Completa'
+  if (d === t) return 'Disponible'
+  return 'Parcial'
+}
+const getSalaStatusColor = (sala) =>
+  ({ Completa: 'negative', Parcial: 'warning', Disponible: 'positive' })[getSalaStatus(sala)] ||
+  'grey'
+const getCamaStatusColor = (estado) =>
+  ({ Disponible: 'positive', Ocupado: 'negative', Mantenimiento: 'warning' })[estado] || 'grey'
+const getCamaIconColor = getCamaStatusColor
+const getCamaCardClass = (estado) =>
+  ({ Disponible: 'cama-disponible', Ocupado: 'cama-ocupada', Mantenimiento: 'cama-mantenimiento' })[
+    estado
+  ] || ''
+
+onMounted(() => {
+  fetchSalas()
+  fetchEspecialidades()
+})
 </script>
 
 <style scoped>
-.salas-container {
-  min-height: 400px;
-}
-
-.salas-header,
-.detail-header {
-  border-bottom: 1px solid #e0e0e0;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-}
-
-.section-title {
-  margin: 0 0 8px 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #1976d2;
-}
-
-.section-subtitle {
-  margin: 0;
-  color: #666;
-  font-size: 0.95rem;
-}
-
-.salas-content,
-.camas-content {
-  background: #fafafa;
-  min-height: 300px;
-}
-
-.piso-section {
-  margin-bottom: 40px;
-}
-
-.piso-title {
-  margin: 0 0 16px 0;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #424242;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #e0e0e0;
-}
-
 .sala-card {
-  border-radius: 12px;
-  transition: all 0.3s ease;
+  transition: 0.2s;
   cursor: pointer;
-  height: 100%;
 }
-
 .sala-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transform: scale(1.02);
 }
-
-.sala-title {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #1976d2;
-}
-
-.sala-description {
-  margin: 8px 0 0 0;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.sala-stats {
-  background: #f5f5f5;
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-number {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1976d2;
-}
-
-.stat-label {
-  display: block;
-  font-size: 0.8rem;
-  color: #666;
-  margin-top: 2px;
-}
-
-.cama-card {
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  height: 100%;
-}
-
 .cama-disponible {
-  border-left: 4px solid #4caf50;
+  border-left: 5px solid #21ba45;
 }
-
 .cama-ocupada {
-  border-left: 4px solid #f44336;
+  border-left: 5px solid #c10015;
 }
-
 .cama-mantenimiento {
-  border-left: 4px solid #ff9800;
-}
-
-.cama-id {
-  margin: 8px 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #424242;
-}
-
-.paciente-info {
-  background: #ffebee;
-  border-radius: 8px;
-  padding: 8px;
-  margin-top: 8px;
-}
-
-.paciente-nombre {
-  margin: 0 0 4px 0;
-  font-weight: 600;
-  color: #d32f2f;
-  font-size: 0.85rem;
-}
-
-.paciente-ci {
-  margin: 0;
-  color: #666;
-  font-size: 0.8rem;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-}
-
-.add-button {
-  border-radius: 8px;
-  font-weight: 600;
-}
-
-/* Responsive adjustments */
-@media (max-width: 599px) {
-  .salas-header .row,
-  .detail-header .row {
-    flex-direction: column;
-    gap: 16px;
-    text-align: center;
-  }
-
-  .section-title {
-    font-size: 1.3rem;
-  }
-
-  .piso-title {
-    font-size: 1.1rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .section-title {
-    font-size: 1.7rem;
-  }
-
-  .piso-title {
-    font-size: 1.3rem;
-  }
+  border-left: 5px solid #f2c037;
 }
 </style>
