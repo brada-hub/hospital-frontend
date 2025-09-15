@@ -107,7 +107,7 @@ export default defineConfig((ctx) => {
       proxy: {
         // 👇 aquí conectas las peticiones al backend en 9000
         '/api': {
-          target: 'http://localhost:9000',
+          target: 'http://localhost:8000',
           changeOrigin: true,
           secure: false,
         },

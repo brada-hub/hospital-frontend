@@ -1,41 +1,54 @@
+// src/router/routes.js
 const routes = [
-  // Login y Register (fuera del layout)
-  {
-    path: '/',
-    name: 'root',
-    redirect: '/login',
-  },
+  // Login y Registro
   {
     path: '/login',
     name: 'login',
     component: () => import('src/pages/PageLogin.vue'),
   },
 
-  // Dashboard y rutas protegidas (dentro del MainLayout)
+  // RUTA PADRE: MainLayout como contenedor principal
   {
-    path: '/dashboard',
+    path: '/',
     component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true }, // Las rutas hijas heredan esta propiedad
     children: [
+      // 📌 RUTA PRINCIPAL (vacía) con redirección
       {
         path: '',
+        redirect: '/dashboard',
+      },
+      // Rutas reales
+      {
+        path: 'dashboard',
         name: 'dashboard',
         component: () => import('pages/PageDashboard.vue'),
-        meta: { requiresAuth: true },
+        meta: { permission: 'acceso.dashboard' },
       },
       {
-        path: '/gestion-hospital',
+        path: 'gestion-hospital',
         name: 'gestion-hospital',
         component: () => import('pages/PageHospital.vue'),
-        meta: { requiresAuth: true },
+        meta: { permission: 'acceso.gestion-hospital' },
       },
-
       {
         path: 'pacientes',
         name: 'pacientes',
         component: () => import('pages/PagePacientes.vue'),
-        meta: { requiresAuth: true },
+        meta: { permission: 'acceso.pacientes' },
       },
-      // Ruta de usuarios eliminada temporalmente
+      {
+        path: 'usuarios-y-roles',
+        name: 'usuarios-y-roles',
+        component: () => import('pages/PageRolesPermisos.vue'),
+        meta: { permission: 'acceso.usuarios-y-roles' },
+      },
+      {
+        path: 'hospital',
+        name: 'hospital',
+        component: () => import('pages/PageHospital.vue'),
+        meta: { permission: 'acceso.hospital' },
+      },
     ],
   },
 

@@ -1,8 +1,6 @@
 <template>
   <q-layout view="lHh Lpr fFf" class="main-layout">
-    <!-- Drawer (sidebar) -->
     <q-drawer v-model="drawer" show-if-above bordered class="elegant-drawer" :width="280">
-      <!-- Header del drawer -->
       <div class="drawer-header">
         <div class="hospital-icon-container">
           <q-icon name="local_hospital" size="28px" class="hospital-icon" />
@@ -13,7 +11,6 @@
         </div>
       </div>
 
-      <!-- Navigation Menu -->
       <q-list class="navigation-menu">
         <q-item
           clickable
@@ -22,6 +19,7 @@
           exact
           class="nav-item"
           active-class="nav-item-active"
+          v-if="userStore.hasPermission('acceso.dashboard')"
         >
           <q-item-section avatar>
             <q-icon name="dashboard" class="nav-icon" />
@@ -37,6 +35,7 @@
           to="/gestion-hospital"
           class="nav-item"
           active-class="nav-item-active"
+          v-if="userStore.hasPermission('acceso.gestion-hospital')"
         >
           <q-item-section avatar>
             <q-icon name="business" class="nav-icon" />
@@ -46,7 +45,14 @@
           </q-item-section>
         </q-item>
 
-        <q-item clickable v-ripple to="/pacientes" class="nav-item" active-class="nav-item-active">
+        <q-item
+          clickable
+          v-ripple
+          to="/pacientes"
+          class="nav-item"
+          active-class="nav-item-active"
+          v-if="userStore.hasPermission('acceso.pacientes')"
+        >
           <q-item-section avatar>
             <q-icon name="groups" class="nav-icon" />
           </q-item-section>
@@ -58,10 +64,10 @@
         <q-item
           clickable
           v-ripple
-          to="/usuarios"
-          v-if="isAdmin"
+          to="/usuarios-y-roles"
           class="nav-item"
           active-class="nav-item-active"
+          v-if="userStore.hasPermission('acceso.usuarios-y-roles')"
         >
           <q-item-section avatar>
             <q-icon name="admin_panel_settings" class="nav-icon" />
@@ -75,7 +81,7 @@
           clickable
           v-ripple
           to="/hospital"
-          v-if="hospitalName"
+          v-if="userStore.hasPermission('acceso.hospital')"
           class="nav-item"
           active-class="nav-item-active"
         >
@@ -88,7 +94,6 @@
         </q-item>
       </q-list>
 
-      <!-- Logout Button -->
       <div class="drawer-footer">
         <q-btn
           flat
@@ -101,7 +106,6 @@
       </div>
     </q-drawer>
 
-    <!-- Header -->
     <q-header class="elegant-header" height-hint="64">
       <q-toolbar class="header-toolbar">
         <q-btn flat dense round icon="menu" @click="drawer = !drawer" class="menu-btn" />
@@ -120,7 +124,6 @@
       </q-toolbar>
     </q-header>
 
-    <!-- Contenido -->
     <q-page-container class="page-container">
       <router-view />
     </q-page-container>
@@ -138,7 +141,6 @@ const $q = useQuasar()
 const router = useRouter()
 
 const hospitalName = computed(() => userStore.hospital?.nombre || 'Mi Hospital')
-const isAdmin = computed(() => userStore.user?.rol_id === 1)
 
 const cerrarSesion = async () => {
   await userStore.logout()
