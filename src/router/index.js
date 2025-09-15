@@ -1,5 +1,5 @@
 // src/router/index.js
-import { defineRouter } from '#q-app/wrappers'
+import { route } from 'quasar/wrappers'
 import {
   createRouter,
   createMemoryHistory,
@@ -9,7 +9,7 @@ import {
 import routes from './routes'
 import { useUserStore } from 'stores/user'
 
-export default defineRouter(function () {
+export default route(function (/* { store, ssrContext } */) {
   const createHistory = process.env.SERVER
     ? createMemoryHistory
     : process.env.VUE_ROUTER_MODE === 'history'
@@ -22,51 +22,39 @@ export default defineRouter(function () {
     history: createHistory(process.env.VUE_ROUTER_BASE),
   })
 
-  // Guard global definitivo y robusto
   Router.beforeEach(async (to, from, next) => {
     const userStore = useUserStore()
+    const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
 
-    // Si la ruta requiere autenticación, primero verificamos el estado de autenticación.
-    if (to.meta.requiresAuth) {
-      if (!userStore.isLoggedIn) {
-        // El usuario no está logueado, lo redirigimos al login.
-        await userStore.logout() // Limpiamos cualquier estado corrupto por si acaso
-        return next('/login')
+    // Intenta cargar el usuario desde localStorage si no está en la tienda (útil en recargas de página)
+    if (!userStore.isLoggedIn && localStorage.getItem('token')) {
+      await userStore.loadUser()
+    }
+
+    const isAuthenticated = userStore.isLoggedIn
+
+    // CASO 1: La ruta requiere autenticación
+    if (requiresAuth) {
+      if (!isAuthenticated) {
+        // 1a: No está autenticado -> a la página de login
+        return next({ name: 'login' })
       }
 
-      // Si el usuario ya está logueado, verificamos su objeto de usuario y permisos
-      // antes de permitir el acceso.
-      if (!userStore.user) {
-        // Si no tenemos el objeto de usuario en el store, lo cargamos.
-        // Esto previene errores de "undefined" en la lógica de permisos.
-        await userStore.loadUser()
-      }
-
-      // Una vez que el usuario está autenticado y cargado,
-      // verificamos si tiene el permiso necesario.
+      // 1b: Está autenticado, ahora revisamos permisos
       const requiredPermission = to.meta.permission
       if (requiredPermission && !userStore.hasPermission(requiredPermission)) {
-        // El usuario no tiene el permiso necesario, lo redirigimos a la primera página que sí puede ver.
-        const hasDashboardAccess = userStore.hasPermission('acceso.dashboard')
-        const hasUsuariosAccess = userStore.hasPermission('acceso.usuarios-y-roles')
-
-        if (hasDashboardAccess) {
-          return next('/')
-        } else if (hasUsuariosAccess) {
-          return next('/usuarios-y-roles')
-        } else {
-          // Si no tiene acceso a NADA, lo mandamos al login.
-          return next('/login')
-        }
+        // No tiene el permiso requerido -> a la página de Acceso Denegado
+        return next({ name: 'AccessDenied' })
       }
     }
 
-    // Si el usuario está logueado e intenta ir a la página de login, lo redirigimos al dashboard.
-    if (to.path === '/login' && userStore.isLoggedIn) {
-      return next('/')
+    // CASO 2: El usuario ya está logueado e intenta ir a /login
+    if (to.name === 'login' && isAuthenticated) {
+      // Lo mandamos al dashboard para que no vea el login de nuevo
+      return next({ name: 'dashboard' })
     }
 
-    // Si no hay restricciones o si se cumplen, continuamos la navegación.
+    // Si todo está bien, permite la navegación
     next()
   })
 

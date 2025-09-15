@@ -1,107 +1,124 @@
 <template>
-  <div class="q-pa-md">
-    <q-list bordered class="rounded-borders">
-      <q-expansion-item
-        v-for="sala in salas"
-        :key="sala.id"
-        group="salas-group"
-        header-class="bg-white text-primary text-bold"
-        class="expansion-item-header"
-      >
-        <template v-slot:header>
-          <q-item-section avatar>
-            <q-icon name="local_hospital" color="primary" />
-          </q-item-section>
-          <q-item-section>
-            <q-item-label class="text-h6">{{ sala.nombre }}</q-item-label>
-            <q-item-label caption class="text-grey-8">
-              Especialidad: {{ sala.especialidad?.nombre || 'N/A' }}
-            </q-item-label>
-          </q-item-section>
-        </template>
+  <div class="salas-container">
+    <div class="header-section">
+      <h2 class="titulo-principal">Gestión de Camas Médicas</h2>
+    </div>
 
-        <q-separator />
-
-        <q-card-section>
-          <div class="row q-col-gutter-md">
-            <div
-              v-for="cama in getCamasBySala(sala.id)"
-              :key="cama.id"
-              class="col-12 col-sm-6 col-md-4 col-lg-2-5"
-            >
-              <q-card flat bordered :class="`cama-card status-${cama.estado.toLowerCase()}`">
-                <q-card-section class="q-pa-md text-center">
-                  <q-icon
-                    name="bed"
-                    size="xl"
-                    :color="cama.estado === 'activo' ? 'positive' : 'negative'"
-                  />
-                  <div class="text-h6 q-mt-sm">{{ cama.nombre }}</div>
-                  <div class="text-subtitle1 text-bold">{{ cama.tipo }}</div>
-                  <div class="text-caption text-grey-8">{{ cama.estado }}</div>
-                </q-card-section>
-
-                <q-card-actions align="center" class="bg-grey-2">
-                  <q-btn
-                    dense
-                    round
-                    flat
-                    icon="edit"
-                    color="warning"
-                    @click="openEditCamaDialog(cama)"
-                  />
-                  <q-btn
-                    dense
-                    round
-                    flat
-                    :icon="cama.estado === 'activo' ? 'block' : 'check'"
-                    :color="cama.estado === 'activo' ? 'negative' : 'positive'"
-                    @click="toggleCamaEstado(cama)"
-                  />
-                </q-card-actions>
-              </q-card>
-            </div>
-
-            <div class="col-12 col-sm-6 col-md-4 col-lg-2-5">
-              <q-card
-                flat
-                bordered
-                class="add-cama-card cursor-pointer"
-                @click="openAddCamaDialog(sala.id)"
-              >
-                <q-card-section class="text-center q-pa-lg">
-                  <q-icon name="add_circle_outline" size="lg" color="primary" />
-                  <div class="q-mt-sm text-primary text-weight-bold">Añadir Cama</div>
-                </q-card-section>
-              </q-card>
+    <div class="acordeon-container">
+      <div v-for="sala in salas" :key="sala.id" class="sala-acordeon-item">
+        <div class="sala-acordeon-header" @click="toggleExpansion(sala.id)">
+          <div class="sala-info">
+            <q-icon name="meeting_room" class="sala-icon" size="2rem" />
+            <div class="sala-details">
+              <h3 class="sala-nombre"><strong>SALA:</strong> {{ sala.nombre }}</h3>
             </div>
           </div>
-        </q-card-section>
-      </q-expansion-item>
-    </q-list>
+          <q-icon
+            name="expand_more"
+            size="md"
+            class="expand-icon"
+            :class="{ 'is-expanded': expandedSalaId === sala.id }"
+          />
+        </div>
+
+        <q-slide-transition>
+          <div v-show="expandedSalaId === sala.id" class="camas-desplegable">
+            <div class="camas-grid">
+              <div
+                v-for="cama in getCamasBySala(sala.id)"
+                :key="cama.id"
+                class="sala-card"
+                :class="{ 'card-inactivo': cama.estado === 'inactivo' }"
+              >
+                <div class="card-header">
+                  <div class="sala-info">
+                    <q-icon name="bed" class="sala-icon" size="2rem" />
+                    <div class="sala-details">
+                      <span class="sala-label">CAMA:</span>
+                      <h3 class="sala-nombre">{{ cama.nombre }}</h3>
+                    </div>
+                  </div>
+                  <q-chip
+                    :class="cama.estado === 'activo' ? 'estado-activo' : 'estado-inactivo'"
+                    :label="cama.estado"
+                    dense
+                  />
+                </div>
+                <div class="card-body">
+                  <div class="info-item">
+                    <q-icon name="category" class="info-icon" />
+                    <span class="info-label">Tipo:</span>
+                    <span class="info-value">{{ cama.tipo }}</span>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <q-btn
+                    flat
+                    dense
+                    class="btn-editar"
+                    icon="edit"
+                    label="Editar"
+                    @click="openEditCamaDialog(cama)"
+                    no-caps
+                  />
+                  <q-btn
+                    flat
+                    dense
+                    :class="cama.estado === 'activo' ? 'btn-inactivar' : 'btn-activar'"
+                    :icon="cama.estado === 'activo' ? 'block' : 'check'"
+                    :label="cama.estado === 'activo' ? 'Desactivar' : 'Activar'"
+                    @click="toggleCamaEstado(cama)"
+                    no-caps
+                  />
+                </div>
+              </div>
+
+              <div class="add-card" @click="openAddCamaDialog(sala.id)">
+                <div class="add-content">
+                  <q-icon name="add_circle" class="add-icon" />
+                  <p class="add-text">Añadir Cama</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </q-slide-transition>
+      </div>
+    </div>
 
     <q-dialog v-model="camaDialog" persistent>
-      <q-card style="min-width: 400px">
-        <q-card-section>
-          <div class="text-h6">
-            {{ camaForm.id ? 'Editar Cama' : 'Añadir Cama' }}
-          </div>
+      <q-card class="dialog-card">
+        <q-card-section class="dialog-header">
+          <div class="dialog-title">{{ camaForm.id ? 'Editar Cama' : 'Añadir Nueva Cama' }}</div>
         </q-card-section>
-        <q-card-section>
-          <q-input v-model="camaForm.nombre" label="Nombre" outlined dense class="q-mb-sm" />
-          <q-input v-model="camaForm.tipo" label="Tipo" outlined dense class="q-mb-sm" />
-          <q-select
+        <q-card-section class="dialog-content">
+          <q-input
+            v-model="camaForm.nombre"
+            label="Nombre *"
+            outlined
+            dense
+            class="input-field"
+            :rules="reglasGenericas"
+          />
+          <q-input
+            v-model="camaForm.tipo"
+            label="Tipo *"
+            outlined
+            dense
+            class="input-field"
+            :rules="reglasGenericas"
+          />
+          <q-input
             v-model="camaForm.estado"
-            :options="['activo', 'inactivo']"
             label="Estado"
             outlined
             dense
-            class="q-mb-sm"
+            readonly
+            class="input-field"
           />
         </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cancelar" color="negative" v-close-popup />
-          <q-btn flat label="Guardar" color="primary" @click="saveCama" />
+        <q-card-actions align="right" class="dialog-actions">
+          <q-btn flat label="Cancelar" v-close-popup class="btn-cancelar" />
+          <q-btn label="Guardar" @click="saveCama" class="btn-guardar" :disable="!isFormValido" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -109,7 +126,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 
@@ -117,8 +134,8 @@ const $q = useQuasar()
 
 const salas = ref([])
 const camas = ref([])
-
 const camaDialog = ref(false)
+const expandedSalaId = ref(null)
 
 const camaForm = reactive({
   id: null,
@@ -128,81 +145,78 @@ const camaForm = reactive({
   sala_id: null,
 })
 
-// 📌 Funciones para SALAS
+const reglasGenericas = [
+  (val) => (!!val && val.trim().length >= 3) || 'Debe tener al menos 3 caracteres',
+]
+const isFormValido = computed(
+  () => camaForm.nombre.trim().length >= 3 && camaForm.tipo.trim().length >= 3,
+)
+
+const toggleExpansion = (salaId) => {
+  expandedSalaId.value = expandedSalaId.value === salaId ? null : salaId
+}
+
 const fetchSalas = async () => {
   try {
     const { data } = await api.get('/salas')
     salas.value = data
   } catch (error) {
-    console.error(error)
+    console.error('Error al cargar salas:', error)
     $q.notify({ type: 'negative', message: 'Error al cargar salas' })
   }
 }
 
-// 📌 Funciones para CAMAS
 const fetchCamas = async () => {
   try {
     const { data } = await api.get('/camas')
     camas.value = data
   } catch (error) {
-    console.error(error)
+    console.error('Error al cargar camas:', error)
     $q.notify({ type: 'negative', message: 'Error al cargar camas' })
   }
 }
 
-const getCamasBySala = (salaId) => {
-  return camas.value.filter((cama) => cama.sala_id === salaId)
-}
+const getCamasBySala = (salaId) => camas.value.filter((cama) => cama.sala_id === salaId)
 
 const openAddCamaDialog = (salaId) => {
-  Object.assign(camaForm, {
-    id: null,
-    nombre: '',
-    tipo: '',
-    estado: 'activo',
-    sala_id: salaId,
-  })
+  Object.assign(camaForm, { id: null, nombre: '', tipo: '', estado: 'activo', sala_id: salaId })
   camaDialog.value = true
 }
 
 const openEditCamaDialog = (cama) => {
-  Object.assign(camaForm, cama)
+  Object.assign(camaForm, { ...cama })
   camaDialog.value = true
 }
 
 const saveCama = async () => {
+  if (!isFormValido.value) return
   try {
-    const payload = { ...camaForm }
     if (camaForm.id) {
-      await api.put(`/camas/${camaForm.id}`, payload)
+      await api.put(`/camas/${camaForm.id}`, camaForm)
       $q.notify({ type: 'positive', message: 'Cama actualizada' })
     } else {
-      await api.post('/camas', payload)
+      await api.post('/camas', camaForm)
       $q.notify({ type: 'positive', message: 'Cama creada' })
     }
     camaDialog.value = false
     await fetchCamas()
   } catch (error) {
-    console.error(error)
+    console.error('Error al guardar cama:', error)
     $q.notify({ type: 'negative', message: 'Error al guardar cama' })
   }
 }
 
 const toggleCamaEstado = async (cama) => {
   try {
-    const newEstado = cama.estado === 'activo' ? 'inactivo' : 'activo'
-    await api.put(`/camas/${cama.id}`, { ...cama, estado: newEstado })
-
-    $q.notify({ type: 'positive', message: `Cama ${newEstado} correctamente` })
+    const nuevoEstado = cama.estado === 'activo' ? 'inactivo' : 'activo'
+    await api.put(`/camas/${cama.id}`, { ...cama, estado: nuevoEstado })
+    $q.notify({ type: 'positive', message: `Cama ${nuevoEstado}` })
     await fetchCamas()
   } catch (error) {
-    console.error(error)
-    $q.notify({ type: 'negative', message: 'Error al cambiar estado de la cama' })
+    console.error('Error al cambiar estado de la cama:', error)
+    $q.notify({ type: 'negative', message: 'Error al cambiar estado' })
   }
 }
-
-// Se eliminó la función de especialidades ya que no se usaba en este componente
-// y causaba un error de ESLint.
 
 onMounted(() => {
   fetchSalas()
@@ -211,69 +225,223 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/*
-  Clase personalizada para las columnas.
-  Crea 5 columnas de igual ancho para pantallas grandes.
-*/
-.col-lg-2-5 {
-  width: 20%;
+/* ESTILOS GENERALES Y DE HEADER */
+.salas-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
 }
-@media (max-width: 1439px) {
-  /* Tablet/Desktop */
-  .col-lg-2-5 {
-    width: 33.3333%; /* Vuelve a 3 columnas para pantallas más pequeñas */
-  }
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
 }
-@media (max-width: 1023px) {
-  /* Tablet */
-  .col-lg-2-5 {
-    width: 50%; /* 2 columnas */
-  }
-}
-@media (max-width: 599px) {
-  /* Móvil */
-  .col-lg-2-5 {
-    width: 100%; /* 1 columna */
-  }
+.titulo-principal {
+  background: linear-gradient(135deg, #0f3027 0%, #082f49 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+  font-size: 1.75rem;
+  margin: 0;
 }
 
-.expansion-item-header {
-  transition: background-color 0.2s ease;
+/* ESTILOS DEL ACORDEÓN */
+.acordeon-container {
+  display: grid;
+  gap: 16px;
 }
-.expansion-item-header:hover {
-  background-color: #f5f5f5 !important;
+.sala-acordeon-item {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
-
-.cama-card {
-  border-radius: 12px;
-  min-height: 200px;
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+.sala-acordeon-header {
+  padding: 20px;
   cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  color: white;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
 }
-.cama-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+.sala-acordeon-item:has(.camas-desplegable[style*='display: block']) .sala-acordeon-header {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
-
-.add-cama-card {
-  border: 2px dashed #1976d2;
-  color: #1976d2;
-  min-height: 200px;
+.sala-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.sala-details {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+.sala-nombre {
+  font-size: 1.25rem;
+  font-weight: 400;
+  margin: 0;
+}
+.sala-nombre strong {
+  font-weight: 700;
   opacity: 0.8;
 }
-.add-cama-card:hover {
-  opacity: 1;
+.expand-icon {
+  transition: transform 0.3s ease-in-out;
+}
+.expand-icon.is-expanded {
+  transform: rotate(180deg);
 }
 
-/* Estilos de estado */
-.status-activo {
-  background-color: #e0f2f1;
-  border-left: 5px solid #00c853;
+/* GRID Y TARJETAS DE CAMAS (REMASTERIZADAS) */
+.camas-desplegable {
+  padding: 20px;
+  background-color: #f8fafc;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
 }
-.status-inactivo {
-  background-color: #ffebee;
-  border-left: 5px solid #d32f2f;
+.camas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+.sala-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.card-header {
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  color: white;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card-body {
+  padding: 16px;
+  background: #f8fafc;
+  flex-grow: 1;
+}
+.card-actions {
+  padding: 8px;
+  display: flex;
+  gap: 8px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+}
+.btn-editar,
+.btn-inactivar,
+.btn-activar {
+  flex: 1;
+  font-weight: 600;
+  border-radius: 0;
+  color: white;
+}
+.btn-editar {
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+}
+.btn-inactivar {
+  background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+}
+.btn-activar {
+  background: linear-gradient(135deg, #065f46 0%, #059669 100%);
+}
+.estado-activo {
+  background: rgba(16, 185, 129, 0.8);
+  color: white;
+}
+.estado-inactivo {
+  background: rgba(239, 68, 68, 0.8);
+  color: white;
+}
+.card-inactivo {
+  background-color: #fef2f2;
+}
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.info-label {
+  font-weight: 600;
+  opacity: 0.8;
+}
+.info-value {
+  flex: 1;
+  word-break: break-word;
+}
+.sala-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+/* TARJETA PARA AÑADIR */
+.add-card {
+  border: 2px dashed #0d9488;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  cursor: pointer;
+  background-color: #f0fdfa;
+}
+.add-content {
+  text-align: center;
+  color: #0d9488;
+}
+.add-icon {
+  font-size: 2.5rem;
+}
+.add-text {
+  font-weight: 600;
+}
+
+/* MODAL (ESTANDARIZADO) */
+.dialog-card {
+  width: 90vw;
+  max-width: 450px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.dialog-header {
+  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
+  color: white;
+}
+.dialog-title {
+  font-size: 1.25rem;
+}
+.dialog-content {
+  padding: 24px;
+}
+.input-field {
+  margin-bottom: 16px;
+}
+.dialog-actions {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+}
+.btn-cancelar {
+  color: #ef4444;
+}
+.btn-guardar {
+  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 8px 24px;
+}
+.btn-guardar:disabled {
+  background: #cccccc;
+  color: #666666;
 }
 </style>

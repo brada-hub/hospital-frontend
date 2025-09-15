@@ -6,6 +6,11 @@ const routes = [
     name: 'login',
     component: () => import('src/pages/PageLogin.vue'),
   },
+  {
+    path: '/access-denied',
+    name: 'AccessDenied',
+    component: () => import('pages/AccesoDenegado.vue'),
+  },
 
   // RUTA PADRE: MainLayout como contenedor principal
   {
