@@ -24,38 +24,46 @@ export default route(function (/* { store, ssrContext } */) {
 
   Router.beforeEach(async (to, from, next) => {
     const userStore = useUserStore()
-    const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
 
-    // Intenta cargar el usuario desde localStorage si no está en la tienda (útil en recargas de página)
+    // Si hay token en localStorage pero store no cargada, cargar usuario
     if (!userStore.isLoggedIn && localStorage.getItem('token')) {
-      await userStore.loadUser()
+      try {
+        await userStore.loadUser()
+      } catch (error) {
+        // registramos el error para debug y redirigimos al login
+        console.warn('Router.beforeEach: userStore.loadUser failed', error)
+        return next({ name: 'login' })
+      }
     }
 
     const isAuthenticated = userStore.isLoggedIn
 
-    // CASO 1: La ruta requiere autenticación
-    if (requiresAuth) {
-      if (!isAuthenticated) {
-        // 1a: No está autenticado -> a la página de login
-        return next({ name: 'login' })
+    // Páginas públicas
+    const publicPages = ['login', 'AccessDenied']
+    const isPublicPage = publicPages.includes(to.name)
+
+    // Caso: no autenticado y página protegida
+    if (!isAuthenticated && !isPublicPage) {
+      return next({ name: 'login' })
+    }
+
+    // Caso: autenticado
+    if (isAuthenticated) {
+      // Si intenta visitar login, redirigir a su ruta accesible
+      if (to.name === 'login') {
+        const dest = userStore.findFirstAccessibleRoute()
+        return next(dest)
       }
 
-      // 1b: Está autenticado, ahora revisamos permisos
-      const requiredPermission = to.meta.permission
+      // Si ruta requiere permiso y no lo tiene -> AccessDenied
+      const requiredPermission = to.meta?.permission
       if (requiredPermission && !userStore.hasPermission(requiredPermission)) {
-        // No tiene el permiso requerido -> a la página de Acceso Denegado
         return next({ name: 'AccessDenied' })
       }
     }
 
-    // CASO 2: El usuario ya está logueado e intenta ir a /login
-    if (to.name === 'login' && isAuthenticated) {
-      // Lo mandamos al dashboard para que no vea el login de nuevo
-      return next({ name: 'dashboard' })
-    }
-
-    // Si todo está bien, permite la navegación
-    next()
+    // permitir navegación por defecto
+    return next()
   })
 
   return Router

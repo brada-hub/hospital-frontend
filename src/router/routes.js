@@ -1,6 +1,5 @@
 // src/router/routes.js
 const routes = [
-  // Login y Registro
   {
     path: '/login',
     name: 'login',
@@ -11,19 +10,12 @@ const routes = [
     name: 'AccessDenied',
     component: () => import('pages/AccesoDenegado.vue'),
   },
-
-  // RUTA PADRE: MainLayout como contenedor principal
   {
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: true }, // Las rutas hijas heredan esta propiedad
+    meta: { requiresAuth: true },
     children: [
-      // 📌 RUTA PRINCIPAL (vacía) con redirección
-      {
-        path: '',
-        redirect: '/dashboard',
-      },
-      // Rutas reales
+      { path: '', redirect: '/dashboard' },
       {
         path: 'dashboard',
         name: 'dashboard',
@@ -45,7 +37,7 @@ const routes = [
       {
         path: 'usuarios-y-roles',
         name: 'usuarios-y-roles',
-        component: () => import('pages/PageRolesPermisos.vue'),
+        component: () => import('pages/GestionUsuariosRolesPage.vue'),
         meta: { permission: 'acceso.usuarios-y-roles' },
       },
       {
@@ -56,8 +48,6 @@ const routes = [
       },
     ],
   },
-
-  // Fallback 404
   {
     path: '/:catchAll(.*)*',
     name: 'error404',

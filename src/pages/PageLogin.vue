@@ -1,7 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <q-page-container>
-      <!-- Background elegante y sutil -->
       <div class="login-background">
         <div class="bg-gradient"></div>
         <div class="bg-pattern"></div>
@@ -16,7 +15,6 @@
           class="login-card row no-wrap overflow-hidden"
           style="max-width: 900px; width: 100%"
         >
-          <!-- Panel izquierdo (Mi Hospital) -->
           <div
             class="col-6 hospital-panel text-white flex flex-center column q-pa-xl"
             :class="$q.screen.lt.md ? 'hidden' : 'col-6'"
@@ -51,13 +49,11 @@
             </div>
           </div>
 
-          <!-- Panel derecho (Formulario de login) -->
           <div
             class="col-6 flex flex-center login-form-panel"
             :class="$q.screen.lt.md ? 'col-12' : 'col-6'"
           >
             <q-card-section class="full-width q-pa-xl">
-              <!-- Header móvil -->
               <div v-if="$q.screen.lt.md" class="text-center q-mb-xl">
                 <div class="mobile-hospital-icon q-mb-md">
                   <q-icon name="local_hospital" size="40px" color="teal-6" />
@@ -65,7 +61,6 @@
                 <div class="text-h4 text-weight-bold text-grey-8 q-mb-sm">Mi Hospital</div>
               </div>
 
-              <!-- Welcome section -->
               <div class="text-center q-mb-xl">
                 <div class="text-h4 text-weight-bold welcome-title q-mb-sm">Bienvenido</div>
                 <div class="text-subtitle1 welcome-subtitle">
@@ -73,9 +68,7 @@
                 </div>
               </div>
 
-              <!-- Formulario -->
               <q-form @submit.prevent="handleLogin" class="q-gutter-lg">
-                <!-- Email Input -->
                 <div class="input-wrapper">
                   <q-input
                     filled
@@ -91,7 +84,6 @@
                   </q-input>
                 </div>
 
-                <!-- Password Input -->
                 <div class="input-wrapper">
                   <q-input
                     filled
@@ -116,7 +108,6 @@
                   </q-input>
                 </div>
 
-                <!-- Login Button -->
                 <q-btn
                   type="submit"
                   class="full-width elegant-login-btn"
@@ -133,7 +124,6 @@
                 </q-btn>
               </q-form>
 
-              <!-- Support -->
               <div class="text-center q-mt-xl">
                 <div class="text-body2 support-text q-mb-sm">¿Tienes problemas?</div>
                 <q-btn
@@ -146,7 +136,6 @@
                 />
               </div>
 
-              <!-- Security Badge -->
               <div class="flex justify-center items-center q-mt-lg security-badge">
                 <q-icon name="security" color="green-6" size="16px" class="q-mr-xs" />
                 <span class="text-caption">Conexión segura SSL</span>
@@ -175,9 +164,14 @@ const showPassword = ref(false)
 
 const handleLogin = async () => {
   try {
-    await userStore.login(email.value, password.value)
-    $q.notify({ type: 'positive', message: 'Bienvenido' })
-    router.push('/dashboard')
+    const destination = await userStore.login(email.value, password.value)
+    // destination debería ser algo como { name: 'dashboard' } o { name: 'AccessDenied' }
+    if (destination) {
+      router.push(destination)
+    } else {
+      // fallback prudente
+      router.push({ name: 'AccessDenied' })
+    }
   } catch (err) {
     $q.notify({ type: 'negative', message: err })
   }
