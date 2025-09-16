@@ -28,9 +28,12 @@
                 v-for="cama in getCamasBySala(sala.id)"
                 :key="cama.id"
                 class="sala-card"
-                :class="{ 'card-inactivo': cama.estado === 'inactivo' }"
+                :class="{ 'card-inactivo': !cama.estado }"
               >
-                <div class="card-header">
+                <div
+                  class="card-header"
+                  :style="{ background: getDisponibilidadInfo(cama.disponibilidad).gradient }"
+                >
                   <div class="sala-info">
                     <q-icon name="bed" class="sala-icon" size="2rem" />
                     <div class="sala-details">
@@ -39,8 +42,8 @@
                     </div>
                   </div>
                   <q-chip
-                    :class="cama.estado === 'activo' ? 'estado-activo' : 'estado-inactivo'"
-                    :label="cama.estado"
+                    :class="cama.estado ? 'estado-activo' : 'estado-inactivo'"
+                    :label="cama.estado ? 'Activo' : 'Inactivo'"
                     dense
                   />
                 </div>
@@ -49,6 +52,23 @@
                     <q-icon name="category" class="info-icon" />
                     <span class="info-label">Tipo:</span>
                     <span class="info-value">{{ cama.tipo }}</span>
+                  </div>
+                  <div class="info-item q-mt-sm">
+                    <q-icon
+                      :name="getDisponibilidadInfo(cama.disponibilidad).icon"
+                      class="info-icon"
+                      :style="{ color: getDisponibilidadInfo(cama.disponibilidad).color }"
+                    />
+                    <span class="info-label">Disponibilidad:</span>
+                    <span
+                      class="info-value"
+                      :style="{
+                        color: getDisponibilidadInfo(cama.disponibilidad).color,
+                        fontWeight: 'bold',
+                      }"
+                    >
+                      {{ getDisponibilidadInfo(cama.disponibilidad).text }}
+                    </span>
                   </div>
                 </div>
                 <div class="card-actions">
@@ -64,9 +84,9 @@
                   <q-btn
                     flat
                     dense
-                    :class="cama.estado === 'activo' ? 'btn-inactivar' : 'btn-activar'"
-                    :icon="cama.estado === 'activo' ? 'block' : 'check'"
-                    :label="cama.estado === 'activo' ? 'Desactivar' : 'Activar'"
+                    :class="cama.estado ? 'btn-inactivar' : 'btn-activar'"
+                    :icon="cama.estado ? 'block' : 'check'"
+                    :label="cama.estado ? 'Desactivar' : 'Activar'"
                     @click="toggleCamaEstado(cama)"
                     no-caps
                   />
@@ -107,13 +127,24 @@
             class="input-field"
             :rules="reglasGenericas"
           />
-          <q-input
-            v-model="camaForm.estado"
-            label="Estado"
+
+          <q-select
+            v-model="camaForm.disponibilidad"
+            :options="opcionesDisponibilidad"
+            label="Disponibilidad *"
+            emit-value
+            map-options
             outlined
             dense
-            readonly
             class="input-field"
+          />
+
+          <q-toggle
+            v-model="camaForm.estado"
+            :label="camaForm.estado ? 'Estado: Activo' : 'Estado: Inactivo'"
+            :color="camaForm.estado ? 'teal' : 'red'"
+            left-label
+            class="q-mt-md"
           />
         </q-card-section>
         <q-card-actions align="right" class="dialog-actions">
@@ -131,7 +162,6 @@ import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 
 const $q = useQuasar()
-
 const salas = ref([])
 const camas = ref([])
 const camaDialog = ref(false)
@@ -141,9 +171,19 @@ const camaForm = reactive({
   id: null,
   nombre: '',
   tipo: '',
-  estado: 'activo',
+  // CAMBIADO: 'estado' ahora es un booleano
+  estado: true,
+  // AÑADIDO: 'disponibilidad' con valor por defecto
+  disponibilidad: 1,
   sala_id: null,
 })
+
+// AÑADIDO: Opciones para el q-select de disponibilidad
+const opcionesDisponibilidad = [
+  { label: 'Disponible', value: 1 },
+  { label: 'Ocupada', value: 0 },
+  { label: 'En Mantenimiento', value: 2 },
+]
 
 const reglasGenericas = [
   (val) => (!!val && val.trim().length >= 3) || 'Debe tener al menos 3 caracteres',
@@ -152,6 +192,40 @@ const isFormValido = computed(
   () => camaForm.nombre.trim().length >= 3 && camaForm.tipo.trim().length >= 3,
 )
 
+// AÑADIDO: Función para obtener texto, color e ícono de la disponibilidad
+const getDisponibilidadInfo = (valor) => {
+  switch (valor) {
+    case 0:
+      return {
+        text: 'Ocupada',
+        color: '#ef4444',
+        icon: 'person',
+        gradient: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)',
+      }
+    case 1:
+      return {
+        text: 'Disponible',
+        color: '#22c55e',
+        icon: 'check_circle',
+        gradient: 'linear-gradient(135deg, #065f46 0%, #059669 100%)',
+      }
+    case 2:
+      return {
+        text: 'Mantenimiento',
+        color: '#f59e0b',
+        icon: 'build',
+        gradient: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)',
+      }
+    default:
+      return {
+        text: 'Desconocido',
+        color: 'grey',
+        icon: 'help',
+        gradient: 'linear-gradient(135deg, #4b5563 0%, #6b7280 100%)',
+      }
+  }
+}
+
 const toggleExpansion = (salaId) => {
   expandedSalaId.value = expandedSalaId.value === salaId ? null : salaId
 }
@@ -159,7 +233,7 @@ const toggleExpansion = (salaId) => {
 const fetchSalas = async () => {
   try {
     const { data } = await api.get('/salas')
-    salas.value = data
+    salas.value = data.filter((s) => s.estado) // Solo mostrar salas activas
   } catch (error) {
     console.error('Error al cargar salas:', error)
     $q.notify({ type: 'negative', message: 'Error al cargar salas' })
@@ -179,7 +253,15 @@ const fetchCamas = async () => {
 const getCamasBySala = (salaId) => camas.value.filter((cama) => cama.sala_id === salaId)
 
 const openAddCamaDialog = (salaId) => {
-  Object.assign(camaForm, { id: null, nombre: '', tipo: '', estado: 'activo', sala_id: salaId })
+  // CAMBIADO: Se reinicia el formulario con los nuevos campos
+  Object.assign(camaForm, {
+    id: null,
+    nombre: '',
+    tipo: '',
+    estado: true,
+    disponibilidad: 1,
+    sala_id: salaId,
+  })
   camaDialog.value = true
 }
 
@@ -191,6 +273,7 @@ const openEditCamaDialog = (cama) => {
 const saveCama = async () => {
   if (!isFormValido.value) return
   try {
+    // El 'camaForm' ya tiene los datos correctos (booleano e integer), así que se envía directamente.
     if (camaForm.id) {
       await api.put(`/camas/${camaForm.id}`, camaForm)
       $q.notify({ type: 'positive', message: 'Cama actualizada' })
@@ -206,11 +289,12 @@ const saveCama = async () => {
   }
 }
 
+// CAMBIADO: La función ahora usa 'api.delete' y la lógica de notificación es booleana
 const toggleCamaEstado = async (cama) => {
   try {
-    const nuevoEstado = cama.estado === 'activo' ? 'inactivo' : 'activo'
-    await api.put(`/camas/${cama.id}`, { ...cama, estado: nuevoEstado })
-    $q.notify({ type: 'positive', message: `Cama ${nuevoEstado}` })
+    await api.delete(`camas/${cama.id}`)
+    const message = cama.estado ? 'Cama Desactivada' : 'Cama Activada'
+    $q.notify({ type: 'info', message })
     await fetchCamas()
   } catch (error) {
     console.error('Error al cambiar estado de la cama:', error)
@@ -297,7 +381,7 @@ onMounted(() => {
   transform: rotate(180deg);
 }
 
-/* GRID Y TARJETAS DE CAMAS (REMASTERIZADAS) */
+/* GRID Y TARJETAS DE CAMAS */
 .camas-desplegable {
   padding: 20px;
   background-color: #f8fafc;
@@ -318,7 +402,6 @@ onMounted(() => {
   flex-direction: column;
 }
 .card-header {
-  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   color: white;
   padding: 16px;
   display: flex;
@@ -355,15 +438,17 @@ onMounted(() => {
   background: linear-gradient(135deg, #065f46 0%, #059669 100%);
 }
 .estado-activo {
-  background: rgba(16, 185, 129, 0.8);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
 }
 .estado-inactivo {
-  background: rgba(239, 68, 68, 0.8);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
+  font-style: italic;
 }
 .card-inactivo {
-  background-color: #fef2f2;
+  opacity: 0.7;
+  background-color: #f1f5f9;
 }
 .info-item {
   display: flex;
@@ -384,8 +469,6 @@ onMounted(() => {
   opacity: 0.8;
   text-transform: uppercase;
 }
-
-/* TARJETA PARA AÑADIR */
 .add-card {
   border: 2px dashed #0d9488;
   border-radius: 12px;
@@ -406,8 +489,6 @@ onMounted(() => {
 .add-text {
   font-weight: 600;
 }
-
-/* MODAL (ESTANDARIZADO) */
 .dialog-card {
   width: 90vw;
   max-width: 450px;

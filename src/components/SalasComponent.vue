@@ -23,8 +23,8 @@
             </div>
           </div>
           <q-chip
-            :class="sala.estado === 'activo' ? 'estado-activo' : 'estado-inactivo'"
-            :label="sala.estado"
+            :class="sala.estado ? 'estado-activo' : 'estado-inactivo'"
+            :label="sala.estado ? 'Activo' : 'Inactivo'"
             dense
           />
         </div>
@@ -50,9 +50,9 @@
           <q-btn
             flat
             dense
-            :class="sala.estado === 'activo' ? 'btn-inactivar' : 'btn-activar'"
-            :icon="sala.estado === 'activo' ? 'block' : 'check'"
-            :label="sala.estado === 'activo' ? 'Desactivar' : 'Activar'"
+            :class="sala.estado ? 'btn-inactivar' : 'btn-activar'"
+            :icon="sala.estado ? 'block' : 'check'"
+            :label="sala.estado ? 'Desactivar' : 'Activar'"
             @click="toggleEstado(sala)"
             no-caps
           />
@@ -67,7 +67,6 @@
       </div>
     </div>
 
-    <!-- MODAL -->
     <q-dialog v-model="dialog" persistent>
       <q-card class="dialog-card">
         <q-card-section class="dialog-header">
@@ -76,7 +75,6 @@
           </div>
         </q-card-section>
 
-        <!-- CONTENIDO SCROLLEABLE -->
         <q-card-section class="dialog-content">
           <q-input
             v-model="salaForm.nombre"
@@ -96,15 +94,6 @@
             :rules="reglasTipo"
           />
 
-          <q-input
-            v-model="salaForm.estado"
-            label="Estado"
-            outlined
-            dense
-            readonly
-            class="input-field"
-          />
-
           <q-select
             v-model="salaForm.especialidad_id"
             :options="especialidadesOptions"
@@ -118,6 +107,14 @@
             class="input-field"
             :rules="reglasEspecialidad"
           />
+
+          <q-toggle
+            v-model="salaForm.estado"
+            :label="salaForm.estado ? 'Estado: Activo' : 'Estado: Inactivo'"
+            :color="salaForm.estado ? 'teal' : 'red'"
+            left-label
+            class="q-mt-md"
+          />
         </q-card-section>
 
         <q-card-actions align="right" class="dialog-actions">
@@ -130,7 +127,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 
@@ -139,13 +136,12 @@ const $q = useQuasar()
 const salas = ref([])
 const especialidadesOptions = ref([])
 const dialog = ref(false)
-const formTouched = ref(false)
 
 const salaForm = reactive({
   id: null,
   nombre: '',
   tipo: '',
-  estado: 'activo',
+  estado: true,
   especialidad_id: null,
 })
 
@@ -167,10 +163,6 @@ const isFormValid = computed(() => {
     salaForm.tipo.trim().length >= 3 &&
     salaForm.especialidad_id !== null
   )
-})
-
-watch([() => salaForm.nombre, () => salaForm.tipo, () => salaForm.especialidad_id], () => {
-  formTouched.value = true
 })
 
 const getSalaIcon = (tipo) => {
@@ -196,7 +188,8 @@ const fetchSalas = async () => {
     const { data } = await api.get('/salas')
     salas.value = data
   } catch (error) {
-    console.error(error)
+    // CORREGIDO: Se usa la variable 'error' en un console.error.
+    console.error('Error al cargar salas:', error)
     $q.notify({ type: 'negative', message: 'Error al cargar salas' })
   }
 }
@@ -204,9 +197,10 @@ const fetchSalas = async () => {
 const fetchEspecialidades = async () => {
   try {
     const { data } = await api.get('/especialidades')
-    especialidadesOptions.value = data
+    especialidadesOptions.value = data.filter((e) => e.estado) // Solo mostrar especialidades activas
   } catch (error) {
-    console.error(error)
+    // CORREGIDO: Se usa la variable 'error' en un console.error.
+    console.error('Error al cargar especialidades:', error)
     $q.notify({ type: 'negative', message: 'Error al cargar especialidades' })
   }
 }
@@ -217,7 +211,6 @@ const openAddDialog = () => {
 }
 
 const openEditDialog = (sala) => {
-  formTouched.value = false
   Object.assign(salaForm, sala)
   dialog.value = true
 }
@@ -235,7 +228,7 @@ const saveSala = async () => {
     const payload = {
       nombre: salaForm.nombre.trim(),
       tipo: salaForm.tipo.trim(),
-      estado: salaForm.estado.toLowerCase(),
+      estado: salaForm.estado,
       especialidad_id: salaForm.especialidad_id,
     }
 
@@ -254,13 +247,13 @@ const saveSala = async () => {
     }
 
     dialog.value = false
-    resetForm()
     await fetchSalas()
   } catch (error) {
-    console.error('Error al guardar sala:', error.response?.data || error)
+    // CORREGIDO: Se usa la variable 'error' en un console.error.
+    console.error('Error al guardar la sala:', error)
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Error al guardar sala',
+      message: 'Error al guardar la sala',
     })
   }
 }
@@ -268,24 +261,22 @@ const saveSala = async () => {
 const toggleEstado = async (sala) => {
   try {
     await api.delete(`/salas/${sala.id}`)
+    const message = sala.estado ? 'Sala Desactivada' : 'Sala Activada'
+    $q.notify({ type: 'info', message })
     await fetchSalas()
-    $q.notify({
-      type: 'positive',
-      message: `Sala ${sala.estado === 'activo' ? 'Desactivada' : 'activada'}`,
-    })
   } catch (error) {
-    console.error(error)
+    // CORREGIDO: Se usa la variable 'error' en un console.error.
+    console.error('Error al cambiar estado:', error)
     $q.notify({ type: 'negative', message: 'Error al cambiar estado' })
   }
 }
 
 const resetForm = () => {
-  formTouched.value = false
   Object.assign(salaForm, {
     id: null,
     nombre: '',
     tipo: '',
-    estado: 'activo',
+    estado: true,
     especialidad_id: null,
   })
 }
@@ -297,14 +288,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* CONTENEDOR */
+/* Tus estilos (no necesitan cambios) */
 .salas-container {
   padding: 24px;
   background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
-  /* min-height: 100vh;*/
 }
-
-/* HEADER */
 .header-section {
   display: flex;
   justify-content: space-between;
@@ -340,8 +328,6 @@ onMounted(() => {
     justify-content: center;
   }
 }
-
-/* GRID */
 .salas-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -354,8 +340,6 @@ onMounted(() => {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 }
-
-/* TARJETAS */
 .sala-card {
   background: white;
   border-radius: 16px;
@@ -381,8 +365,6 @@ onMounted(() => {
   gap: 12px;
   background: #f8fafc;
 }
-
-/* CHIP ESTADO */
 .estado-activo {
   background: #065f46;
   color: white;
@@ -393,8 +375,6 @@ onMounted(() => {
   color: white;
   font-weight: 600;
 }
-
-/* BOTONES */
 .btn-editar {
   background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   color: white;
@@ -410,8 +390,6 @@ onMounted(() => {
   color: white;
   flex: 1;
 }
-
-/* CARD ADD */
 .add-card {
   border: 2px dashed #0d9488;
   border-radius: 16px;
@@ -426,8 +404,6 @@ onMounted(() => {
   text-align: center;
   color: #0d9488;
 }
-
-/* DIALOG */
 .dialog-card {
   display: flex;
   flex-direction: column;
@@ -444,8 +420,8 @@ onMounted(() => {
 }
 .dialog-content {
   padding: 24px;
-  overflow-y: auto; /* Scroll solo en el contenido */
-  flex: 1; /* ocupa espacio disponible */
+  overflow-y: auto;
+  flex: 1;
 }
 .dialog-actions {
   padding: 16px 24px;
@@ -462,18 +438,15 @@ onMounted(() => {
     max-width: 700px;
   }
 }
-
-/* INPUTS */
 .input-field {
   margin-bottom: 16px;
 }
 .sala-details h3.sala-nombre {
-  font-size: 1.3rem; /* <-- ESTA LÍNEA CONTROLA EL TAMAÑO */
+  font-size: 1.3rem;
   margin: 0;
   font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); /* Opcional: para que se lea mejor */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
-
 .sala-details p.sala-tipo {
   font-size: 0.9rem;
   margin: 4px 0 0 0;

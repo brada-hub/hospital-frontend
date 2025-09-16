@@ -1,4 +1,3 @@
-// src/stores/user.js
 import { defineStore } from 'pinia'
 import { api } from 'boot/axios'
 import { ref, computed } from 'vue'
@@ -32,13 +31,18 @@ export const useUserStore = defineStore('user', () => {
   const hasPermission = (permission) => {
     if (!user.value) return false
 
+    // 1. Revisa si el usuario tiene un permiso directo (permitido/denegado). Esto tiene prioridad.
     const userPerm = (user.value.permissions || []).find((p) => p.nombre === permission)
-    if (userPerm) return userPerm.pivot?.estado === 'permitido'
+    if (userPerm) {
+      return userPerm.pivot?.estado === 'permitido'
+    }
 
+    // 2. Si no hay permiso directo, revisa si el rol del usuario tiene el permiso.
     const rolePerms = user.value.rol?.permissions || []
-    return rolePerms.some((p) =>
-      p.nombre === permission ? (p.pivot ? p.pivot.estado === 'permitido' : true) : false,
-    )
+
+    // CAMBIADO: La lógica ahora es más simple y correcta.
+    // Simplemente comprueba si un permiso con ese nombre existe en la lista del rol.
+    return rolePerms.some((p) => p.nombre === permission)
   }
 
   // Encontrar primera ruta accesible
@@ -108,10 +112,13 @@ export const useUserStore = defineStore('user', () => {
   const logout = async (redirectToLogin = true) => {
     try {
       if (token.value) {
-        await api.post('/logout', {}, { headers: { Authorization: `Bearer ${token.value}` } })
+        // Usamos una condición para evitar el bucle de logout si el token ya es inválido
+        if (api.defaults.headers.common.Authorization) {
+          await api.post('/logout')
+        }
       }
     } catch (e) {
-      console.warn('Logout server error', e)
+      console.warn('Logout server error (ignorable if token was already invalid)', e)
     }
 
     user.value = null

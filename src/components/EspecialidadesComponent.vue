@@ -17,7 +17,7 @@
         v-for="item in especialidades"
         :key="item.id"
         class="sala-card"
-        :class="{ 'card-inactivo': item.estado === 'inactivo' }"
+        :class="{ 'card-inactivo': !item.estado }"
       >
         <div class="card-header">
           <div class="sala-info">
@@ -28,8 +28,8 @@
             </div>
           </div>
           <q-chip
-            :class="item.estado === 'activo' ? 'estado-activo' : 'estado-inactivo'"
-            :label="item.estado"
+            :class="item.estado ? 'estado-activo' : 'estado-inactivo'"
+            :label="item.estado ? 'Activo' : 'Inactivo'"
             dense
           />
         </div>
@@ -55,9 +55,9 @@
           <q-btn
             flat
             dense
-            :class="item.estado === 'activo' ? 'btn-inactivar' : 'btn-activar'"
-            :icon="item.estado === 'activo' ? 'block' : 'check'"
-            :label="item.estado === 'activo' ? 'Desactivar' : 'Activar'"
+            :class="item.estado ? 'btn-inactivar' : 'btn-activar'"
+            :icon="item.estado ? 'block' : 'check'"
+            :label="item.estado ? 'Desactivar' : 'Activar'"
             @click="cambiarEstado(item)"
             no-caps
           />
@@ -98,13 +98,12 @@
             class="input-field"
             :rules="[(val) => (val && val.length > 0) || 'La descripción es requerida']"
           />
-          <q-input
-            v-model="estadoTexto"
-            label="Estado"
-            outlined
-            dense
-            readonly
-            class="input-field"
+          <q-toggle
+            v-model="formulario.estado"
+            :label="formulario.estado ? 'Estado: Activo' : 'Estado: Inactivo'"
+            :color="formulario.estado ? 'teal' : 'red'"
+            left-label
+            class="q-mt-md"
           />
         </q-card-section>
         <q-card-actions align="right" class="dialog-actions">
@@ -120,15 +119,12 @@
     </q-dialog>
   </div>
 </template>
-
 <script setup>
-// El script está correcto, no necesita cambios.
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 
 const $q = useQuasar()
-
 const especialidades = ref([])
 const mostrarDialog = ref(false)
 
@@ -136,15 +132,13 @@ const formulario = reactive({
   id: null,
   nombre: '',
   descripcion: '',
-  estado: 'activo',
-  hospital_id: 1,
+  estado: true,
+  hospital_id: 1, // Asumimos un ID de hospital fijo
 })
 
 const esFormularioValido = computed(() => {
-  return formulario.nombre.trim().length >= 3 && formulario.descripcion.trim().length >= 10
+  return formulario.nombre.trim().length >= 3 && formulario.descripcion.trim().length >= 3
 })
-
-const estadoTexto = computed(() => (formulario.estado === 'activo' ? 'Activo' : 'Inactivo'))
 
 const cargarEspecialidades = async () => {
   try {
@@ -161,7 +155,7 @@ const abrirDialogoAgregar = () => {
     id: null,
     nombre: '',
     descripcion: '',
-    estado: 'activo',
+    estado: true,
     hospital_id: 1,
   })
   mostrarDialog.value = true
@@ -172,10 +166,10 @@ const editarEspecialidad = (especialidad) => {
   mostrarDialog.value = true
 }
 
+// CORREGIDO: Se mejora el manejo de errores en esta función
 const guardarEspecialidad = async () => {
-  if (!esFormularioValido.value) {
-    return
-  }
+  if (!esFormularioValido.value) return
+
   try {
     const payload = { ...formulario }
     if (formulario.id) {
@@ -189,16 +183,33 @@ const guardarEspecialidad = async () => {
     await cargarEspecialidades()
   } catch (error) {
     console.error('Error al guardar especialidad:', error)
-    $q.notify({ type: 'negative', message: 'Error al guardar' })
+
+    // Lógica mejorada para mostrar errores de validación de Laravel
+    if (error.response && error.response.status === 422) {
+      const errors = error.response.data.errors
+      let errorMessage = 'Por favor, corrige los siguientes errores:'
+      // Muestra cada error en una nueva línea
+      for (const key in errors) {
+        errorMessage += `<br>- ${errors[key][0]}`
+      }
+      $q.notify({
+        type: 'negative',
+        message: errorMessage,
+        html: true, // Permite que <br> funcione
+        timeout: 7000,
+      })
+    } else {
+      // Muestra un error genérico si no es de validación
+      $q.notify({ type: 'negative', message: 'Error inesperado al guardar' })
+    }
   }
 }
 
 const cambiarEstado = async (especialidad) => {
   try {
-    const nuevoEstado = especialidad.estado === 'activo' ? 'inactivo' : 'activo'
-    await api.put(`/especialidades/${especialidad.id}`, { ...especialidad, estado: nuevoEstado })
+    await api.delete(`/especialidades/${especialidad.id}`)
     await cargarEspecialidades()
-    $q.notify({ type: 'positive', message: `Estado cambiado a ${nuevoEstado}` })
+    $q.notify({ type: 'info', message: 'El estado ha sido actualizado.' })
   } catch (error) {
     console.error('Error al cambiar estado:', error)
     $q.notify({ type: 'negative', message: 'Error al cambiar estado' })
@@ -211,7 +222,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Estilos generales */
+/* Tus estilos (no necesitan cambios) */
 .salas-container {
   padding: 24px;
   background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
@@ -342,7 +353,6 @@ onMounted(() => {
   background: #f8fafc;
 }
 
-/* 👇👇 AQUÍ ESTÁ LA CORRECCIÓN CON LOS DEGRADADOS 👇👇 */
 .btn-editar,
 .btn-inactivar,
 .btn-activar {
