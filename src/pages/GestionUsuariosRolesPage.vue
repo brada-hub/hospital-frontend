@@ -1,10 +1,11 @@
 <template>
-  <div class="salas-container">
-    <div class="header-section">
-      <h2 class="titulo-principal">Gestión de Usuarios y Roles</h2>
+  <div class="page-container">
+    <div class="page-header">
+      <h4 class="page-title">Gestión de Usuarios y Roles</h4>
+      <p class="page-subtitle">Administra los usuarios y define los roles del sistema</p>
     </div>
 
-    <q-card class="sala-card">
+    <q-card class="elegant-card" flat bordered>
       <q-tabs
         v-model="activeTab"
         dense
@@ -27,7 +28,7 @@
         />
       </q-tabs>
 
-      <q-separator />
+      <q-separator class="elegant-separator" />
 
       <q-tab-panels v-model="activeTab" animated class="elegant-panels">
         <q-tab-panel name="gestionar-usuarios" class="q-pa-none">
@@ -47,6 +48,7 @@
 </template>
 
 <script setup>
+// El script no necesita cambios, la lógica se mantiene
 import { ref, onMounted } from 'vue'
 import { api } from 'boot/axios'
 import { useQuasar } from 'quasar'
@@ -56,7 +58,6 @@ import RolesPermisos from 'src/components/usuarios/RolesPermisos.vue'
 const $q = useQuasar()
 const activeTab = ref('gestionar-usuarios')
 
-// Datos compartidos que el padre gestionará
 const rols = ref([])
 const allPermissions = ref([])
 
@@ -87,45 +88,76 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Estilos generales del contenedor y las pestañas */
-.salas-container {
+/* === ESTILOS COPIADOS Y CORREGIDOS PARA SER IGUAL A HOSPITALPAGE === */
+.page-container {
   padding: 24px;
-  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  background: #f8fafc; /* <-- FONDO CORREGIDO A GRIS CLARO */
+  min-height: 100vh;
 }
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+
+.page-header {
   margin-bottom: 32px;
 }
-.titulo-principal {
-  background: linear-gradient(135deg, #0f3027 0%, #082f49 100%);
+
+.page-title {
+  margin: 0 0 8px 0;
+  font-size: 2.25rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-weight: 900;
-  font-size: 1.75rem;
-  margin: 0;
-}
-.sala-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
+  line-height: 1.2;
 }
 
-/* Estilos para Pestañas (Tabs) */
+.page-subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 1.125rem;
+}
+
+.elegant-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background: white;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  position: relative;
+}
+
+.elegant-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
+  z-index: 2;
+}
+
 .elegant-tabs {
   background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 8px;
 }
+
 .elegant-tab {
   font-weight: 600;
+  transition: all 0.2s ease;
 }
+
+.elegant-tab:hover {
+  background-color: rgba(20, 184, 166, 0.1);
+  border-radius: 8px;
+}
+
+.elegant-separator {
+  background: linear-gradient(90deg, transparent 0%, #14b8a6 50%, transparent 100%);
+  height: 1px;
+  opacity: 0.5;
+}
+
 .elegant-panels {
-  background: transparent;
-}
-.q-tab-panel {
-  padding: 16px;
+  background: white;
 }
 </style>

@@ -165,15 +165,19 @@ const showPassword = ref(false)
 const handleLogin = async () => {
   try {
     const destination = await userStore.login(email.value, password.value)
-    // destination debería ser algo como { name: 'dashboard' } o { name: 'AccessDenied' }
     if (destination) {
       router.push(destination)
     } else {
-      // fallback prudente
       router.push({ name: 'AccessDenied' })
     }
   } catch (err) {
-    $q.notify({ type: 'negative', message: err })
+    // Mostramos notificación siempre
+    const message = typeof err === 'string' ? err : 'Error en login'
+    $q.notify({
+      type: 'negative',
+      message,
+      timeout: 5000,
+    })
   }
 }
 </script>

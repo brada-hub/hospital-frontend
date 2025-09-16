@@ -46,6 +46,10 @@ export default route(function (/* { store, ssrContext } */) {
     if (!isAuthenticated && !isPublicPage) {
       return next({ name: 'login' })
     }
+    if (userStore.user?.estado === 0) {
+      await userStore.logout(false)
+      return next({ name: 'login' })
+    }
 
     // Caso: autenticado
     if (isAuthenticated) {

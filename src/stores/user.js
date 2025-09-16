@@ -4,76 +4,53 @@ import { api } from 'boot/axios'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import routesConfig from 'src/router/routes' // config de rutas (array)
+import routesConfig from 'src/router/routes'
 
 export const useUserStore = defineStore('user', () => {
   const router = useRouter()
   const $q = useQuasar()
 
-  // estado
+  // Estado
   const user = ref(null)
   const token = ref(null)
   const hospital = ref(null)
   const loading = ref(false)
 
-  // para evitar cargas concurrentes de usuario
+  // Evitar cargas concurrentes
   let loadUserPromise = null
 
-  // Inactividad (mantengo tu lógica anterior)
+  // Inactividad
   const inactivityTimer = ref(null)
   const countdownTimer = ref(null)
   const inactivityLimit = 15 * 60 * 1000 // 15 min
+  const countdownSeconds = 5
 
-  // getters
+  // Getters
   const isLoggedIn = computed(() => !!token.value && !!user.value)
 
-  // --------------------------
-  // Permisos - función central
-  // --------------------------
+  // Permisos
   const hasPermission = (permission) => {
     if (!user.value) return false
 
-    // 1) permisos individuales del usuario
     const userPerm = (user.value.permissions || []).find((p) => p.nombre === permission)
-    if (userPerm) {
-      // chequear pivot.estado (defensivo)
-      return userPerm.pivot?.estado === 'permitido'
-    }
+    if (userPerm) return userPerm.pivot?.estado === 'permitido'
 
-    // 2) permisos desde el rol (si el rol tiene pivot o no)
     const rolePerms = user.value.rol?.permissions || []
-    // verificar pivot si existe en cada permiso del rol
-    return rolePerms.some((p) => {
-      if (p.nombre !== permission) return false
-      // si tiene pivot en el permiso del rol, respetarlo; si no, considerarlo permitido
-      return p.pivot ? p.pivot.estado === 'permitido' : true
-    })
+    return rolePerms.some((p) =>
+      p.nombre === permission ? (p.pivot ? p.pivot.estado === 'permitido' : true) : false,
+    )
   }
 
-  // --------------------------
-  // Find first accessible route
-  // --------------------------
+  // Encontrar primera ruta accesible
   const findFirstAccessibleRoute = () => {
-    if (!user.value) {
-      return { name: 'AccessDenied' }
-    }
+    if (!user.value) return { name: 'AccessDenied' }
 
-    // rutas hijas del layout '/'
     const mainRoutes = routesConfig.find((r) => r.path === '/')?.children || []
 
-    // recursiva para soportar children
     const findInList = (list) => {
       for (const route of list) {
-        // consideramos solo rutas con name (evitar redirect vacío)
-        if (route.name && route.meta?.permission) {
-          if (hasPermission(route.meta.permission)) {
-            return { name: route.name }
-          }
-        }
-        // si la ruta no tiene permiso listado, podríamos considerarla pública dentro del layout
-        // (opcional) si querés priorizar rutas sin meta.permission, descomenta:
-        // if (route.name && !route.meta?.permission) return { name: route.name }
-
+        if (route.name && route.meta?.permission && hasPermission(route.meta.permission))
+          return { name: route.name }
         if (route.children?.length) {
           const found = findInList(route.children)
           if (found) return found
@@ -82,8 +59,7 @@ export const useUserStore = defineStore('user', () => {
       return null
     }
 
-    const destination = findInList(mainRoutes)
-    return destination || { name: 'AccessDenied' }
+    return findInList(mainRoutes) || { name: 'AccessDenied' }
   }
 
   // --------------------------
@@ -93,6 +69,10 @@ export const useUserStore = defineStore('user', () => {
     loading.value = true
     try {
       const { data } = await api.post('/login', { email, password })
+
+      if (data.user.estado === 0) {
+        throw 'Tu cuenta está desactivada. Contacta al administrador.'
+      }
 
       token.value = data.access_token
       user.value = data.user
@@ -106,17 +86,19 @@ export const useUserStore = defineStore('user', () => {
 
       initInactivityWatcher()
 
-      // decimos la ruta que corresponde
       const destination = findFirstAccessibleRoute()
-
       $q.notify({ type: 'positive', message: 'Bienvenido' })
 
-      // devuelve objeto destino al componente que llamó (no empujamos aquí)
       return destination
     } catch (err) {
-      // limpiar estado
       logout(false)
-      const message = err?.response?.data?.message || err.message || 'Error en login'
+
+      // Normalizamos el mensaje
+      const message =
+        typeof err === 'string'
+          ? err
+          : err?.response?.data?.message || err?.message || 'Error en login'
+
       throw message
     } finally {
       loading.value = false
@@ -129,7 +111,6 @@ export const useUserStore = defineStore('user', () => {
         await api.post('/logout', {}, { headers: { Authorization: `Bearer ${token.value}` } })
       }
     } catch (e) {
-      // ignorar error de logout en servidor
       console.warn('Logout server error', e)
     }
 
@@ -144,77 +125,62 @@ export const useUserStore = defineStore('user', () => {
     clearTimeout(inactivityTimer.value)
     clearInterval(countdownTimer.value)
 
-    if (redirectToLogin) {
-      router.push({ name: 'login' })
-    }
+    if (redirectToLogin) router.push({ name: 'login' })
   }
 
   // --------------------------
-  // Load user (try /me first)
+  // Load user
   // --------------------------
   const loadUser = async () => {
-    // si ya hay promesa en curso, retornarla
     if (loadUserPromise) return loadUserPromise
 
     loadUserPromise = (async () => {
       const localToken = localStorage.getItem('token')
-      const localUser = localStorage.getItem('user')
-      const localHospital = localStorage.getItem('hospital')
-
       if (!localToken) {
-        // nada que hacer
         loadUserPromise = null
         return false
       }
 
-      // preferimos validar /me si el backend lo permite
       try {
         token.value = localToken
         api.defaults.headers.common.Authorization = `Bearer ${localToken}`
 
-        // intenta pedir /me (si tu backend no tiene endpoint, comentalo)
         const { data } = await api.get('/me')
-        user.value = data.user ?? JSON.parse(localUser || 'null')
-        hospital.value = data.user?.hospital ?? JSON.parse(localHospital || 'null')
+        const fetchedUser = data.user
 
-        // persistir en localStorage en caso de que /me tenga datos más frescos
+        if (fetchedUser?.estado === 0) {
+          logout(false)
+          throw { type: 'account_disabled', message: 'Tu cuenta fue desactivada' }
+        }
+
+        user.value = fetchedUser
+        hospital.value = fetchedUser.hospital
+
         localStorage.setItem('user', JSON.stringify(user.value))
         localStorage.setItem('hospital', JSON.stringify(hospital.value))
 
         initInactivityWatcher()
-        loadUserPromise = null
         return true
       } catch (error) {
-        // registramos el error para debug y hacemos fallback a localStorage
-        console.warn('loadUser: /me request failed, falling back to localStorage.', error)
-
-        try {
-          if (localUser && localHospital) {
-            token.value = localToken
-            user.value = JSON.parse(localUser)
-            hospital.value = JSON.parse(localHospital)
-            api.defaults.headers.common.Authorization = `Bearer ${localToken}`
-            initInactivityWatcher()
-            loadUserPromise = null
-            return true
-          }
-        } catch (parseError) {
-          console.error('loadUser: error parsing localStorage user/hospital', parseError)
-        }
-
-        // si falla todo, limpiar
+        console.warn('loadUser failed', error)
         logout()
-        loadUserPromise = null
         return false
+      } finally {
+        loadUserPromise = null
       }
     })()
 
     return loadUserPromise
   }
+
   // --------------------------
-  // Inactivity watcher (tu lógica)
+  // Inactividad
   // --------------------------
   const initInactivityWatcher = () => {
+    window.removeEventListener('mousemove', resetInactivityTimer)
+    window.removeEventListener('keydown', resetInactivityTimer)
+    window.removeEventListener('click', resetInactivityTimer)
+
     clearTimeout(inactivityTimer.value)
     clearInterval(countdownTimer.value)
 
@@ -229,37 +195,31 @@ export const useUserStore = defineStore('user', () => {
     clearTimeout(inactivityTimer.value)
     clearInterval(countdownTimer.value)
 
-    inactivityTimer.value = setTimeout(() => {
-      startCountdown()
-    }, inactivityLimit - 5000)
+    inactivityTimer.value = setTimeout(
+      () => {
+        startCountdown()
+      },
+      inactivityLimit - countdownSeconds * 1000,
+    )
   }
 
   const startCountdown = () => {
-    let secondsLeft = 5
+    let secondsLeft = countdownSeconds
 
     const notif = $q.notify({
       message: `Se cerrará sesión en ${secondsLeft} segundos por inactividad`,
       color: 'red',
       timeout: 0,
-      actions: [
-        {
-          label: 'Mantener sesión',
-          color: 'white',
-          handler: () => {
-            resetInactivityTimer()
-          },
-        },
-      ],
+      actions: [{ label: 'Mantener sesión', color: 'white', handler: resetInactivityTimer }],
     })
 
     countdownTimer.value = setInterval(() => {
       secondsLeft--
-      notif({
-        message: `Se cerrará sesión en ${secondsLeft} segundos por inactividad`,
-      })
+      notif.update({ message: `Se cerrará sesión en ${secondsLeft} segundos por inactividad` })
 
       if (secondsLeft <= 0) {
         clearInterval(countdownTimer.value)
+        notif.dismiss()
         logout()
       }
     }, 1000)
