@@ -28,11 +28,25 @@ const routes = [
         component: () => import('pages/PageHospital.vue'),
         meta: { permission: 'acceso.gestion-hospital' },
       },
+      // CORREGIDO: La ruta 'pacientes' ahora apunta a su componente correcto.
       {
         path: 'pacientes',
-        name: 'pacientes',
-        component: () => import('pages/PagePacientes.vue'),
+        name: 'GestionPacientes', // Nombre actualizado para mayor claridad
+        component: () => import('pages/PagePaciente.vue'),
         meta: { permission: 'acceso.pacientes' },
+      },
+      {
+        path: 'admision',
+        name: 'Admision',
+        component: () => import('pages/AdmisionPage.vue'),
+        meta: { permission: 'acceso.admision' },
+      },
+      // CORREGIDO: La ruta de medicamentos ahora apunta al componente correcto.
+      {
+        path: 'medicamentos',
+        name: 'GestionMedicamentos',
+        component: () => import('pages/MedicamentosPage.vue'),
+        meta: { permission: 'acceso.medicamentos' },
       },
       {
         path: 'usuarios-y-roles',

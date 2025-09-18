@@ -10,7 +10,6 @@
           <div class="hospital-subtitle">Sistema de Gestión</div>
         </div>
       </div>
-
       <q-list class="navigation-menu">
         <q-item
           clickable
@@ -48,6 +47,22 @@
         <q-item
           clickable
           v-ripple
+          to="/admision"
+          class="nav-item"
+          active-class="nav-item-active"
+          v-if="userStore.hasPermission('acceso.admision')"
+        >
+          <q-item-section avatar>
+            <q-icon name="login" class="nav-icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Admisión de Pacientes</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item
+          clickable
+          v-ripple
           to="/pacientes"
           class="nav-item"
           active-class="nav-item-active"
@@ -76,7 +91,21 @@
             <q-item-label class="nav-label">Usuarios y Roles</q-item-label>
           </q-item-section>
         </q-item>
-
+        <q-item
+          clickable
+          v-ripple
+          to="/medicamentos"
+          class="nav-item"
+          active-class="nav-item-active"
+          v-if="userStore.hasPermission('acceso.medicamentos')"
+        >
+          <q-item-section avatar>
+            <q-icon name="medication" class="nav-icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Gestión de Farmacia</q-item-label>
+          </q-item-section>
+        </q-item>
         <q-item
           clickable
           v-ripple

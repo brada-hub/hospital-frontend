@@ -1,4 +1,3 @@
-// src/boot/axios.js
 import { defineBoot } from '#q-app/wrappers'
 import axios from 'axios'
 import { useUserStore } from 'stores/user'
@@ -27,11 +26,13 @@ api.interceptors.response.use(
     return response
   },
   async (error) => {
-    // Si la respuesta tiene un error y el código de estado es 401 (Unauthorized)
-    if (error.response?.status === 401) {
+    // CAMBIADO: Se añade una condición para evitar el bucle de logout.
+    // Solo se ejecuta el logout si el error 401 NO vino de la ruta '/logout'.
+    if (error.response?.status === 401 && !error.config.url.endsWith('/logout')) {
       console.error('Sesión expirada. Redirigiendo al login.')
-      // Importamos el store del usuario para usar su acción de logout
       const userStore = useUserStore()
+      // Es importante que el store esté disponible, puede que necesites
+      // inicializarlo fuera si hay problemas de contexto.
       await userStore.logout()
     }
     // Rechazamos la promesa para que el error pueda ser manejado por el componente que hizo la llamada
