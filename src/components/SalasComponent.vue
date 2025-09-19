@@ -13,7 +13,7 @@
     </div>
 
     <div class="salas-grid">
-      <div v-for="sala in salas" :key="sala.id" class="sala-card">
+      <div v-for="sala in salasActivas" :key="sala.id" class="sala-card">
         <div class="card-header">
           <div class="sala-info">
             <q-icon :name="getSalaIcon(sala.tipo)" class="sala-icon" size="2rem" />
@@ -22,11 +22,7 @@
               <p class="sala-tipo"><strong>Tipo:</strong> {{ sala.tipo }}</p>
             </div>
           </div>
-          <q-chip
-            :class="sala.estado ? 'estado-activo' : 'estado-inactivo'"
-            :label="sala.estado ? 'Activo' : 'Inactivo'"
-            dense
-          />
+          <q-chip class="estado-activo" label="Activo" dense />
         </div>
 
         <div class="card-body">
@@ -50,10 +46,10 @@
           <q-btn
             flat
             dense
-            :class="sala.estado ? 'btn-inactivar' : 'btn-activar'"
-            :icon="sala.estado ? 'block' : 'check'"
-            :label="sala.estado ? 'Desactivar' : 'Activar'"
-            @click="toggleEstado(sala)"
+            class="btn-inactivar"
+            icon="delete"
+            label="Eliminar"
+            @click="eliminarSala(sala)"
             no-caps
           />
         </div>
@@ -69,58 +65,68 @@
 
     <q-dialog v-model="dialog" persistent>
       <q-card class="dialog-card">
-        <q-card-section class="dialog-header">
-          <div class="dialog-title">
-            {{ salaForm.id ? 'Editar Sala' : 'Añadir Nueva Sala' }}
-          </div>
-        </q-card-section>
+        <q-form ref="formRef" @submit.prevent="saveSala">
+          <q-card-section class="dialog-header">
+            <div class="dialog-title">
+              {{ salaForm.id ? 'Editar Sala' : 'Añadir Nueva Sala' }}
+            </div>
+          </q-card-section>
 
-        <q-card-section class="dialog-content">
-          <q-input
-            v-model="salaForm.nombre"
-            label="Nombre de la Sala *"
-            outlined
-            dense
-            class="input-field"
-            :rules="reglasNombre"
-          />
+          <q-card-section class="dialog-content">
+            <q-input
+              v-model="salaForm.nombre"
+              label="Nombre de la Sala *"
+              outlined
+              dense
+              class="input-field"
+              :rules="[
+                (val) => !!val || 'El nombre es requerido',
+                (val) => val.length <= 100 || 'Máximo 100 caracteres',
+                (val) =>
+                  /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s-]+$/.test(val) || 'Solo letras, números y guiones',
+              ]"
+              :error="!!backendErrors.nombre"
+              :error-message="backendErrors.nombre ? backendErrors.nombre[0] : ''"
+              @update:model-value="backendErrors.nombre = null"
+            />
 
-          <q-input
-            v-model="salaForm.tipo"
-            label="Tipo de Sala *"
-            outlined
-            dense
-            class="input-field"
-            :rules="reglasTipo"
-          />
+            <q-select
+              v-model="salaForm.tipo"
+              label="Tipo de Sala *"
+              :options="[
+                'SALA COMÚN',
+                'QUIRÓFANO',
+                'CONSULTORIO',
+                'TERAPIA INTENSIVA (UTI)',
+                'LABORATORIO',
+                'SALA DE ESPERA',
+              ]"
+              outlined
+              dense
+              class="input-field"
+              :rules="[(val) => !!val || 'El tipo es requerido']"
+            />
 
-          <q-select
-            v-model="salaForm.especialidad_id"
-            :options="especialidadesOptions"
-            option-value="id"
-            option-label="nombre"
-            emit-value
-            map-options
-            label="Especialidad *"
-            outlined
-            dense
-            class="input-field"
-            :rules="reglasEspecialidad"
-          />
+            <q-select
+              v-model="salaForm.especialidad_id"
+              :options="especialidadesOptions"
+              option-value="id"
+              option-label="nombre"
+              emit-value
+              map-options
+              label="Especialidad *"
+              outlined
+              dense
+              class="input-field"
+              :rules="[(val) => !!val || 'Debe seleccionar una especialidad']"
+            />
+          </q-card-section>
 
-          <q-toggle
-            v-model="salaForm.estado"
-            :label="salaForm.estado ? 'Estado: Activo' : 'Estado: Inactivo'"
-            :color="salaForm.estado ? 'teal' : 'red'"
-            left-label
-            class="q-mt-md"
-          />
-        </q-card-section>
-
-        <q-card-actions align="right" class="dialog-actions">
-          <q-btn flat label="Cancelar" v-close-popup @click="resetForm" class="btn-cancelar" />
-          <q-btn label="Guardar" @click="saveSala" class="btn-guardar" :disable="!isFormValid" />
-        </q-card-actions>
+          <q-card-actions align="right" class="dialog-actions">
+            <q-btn flat label="Cancelar" v-close-popup @click="resetForm" class="btn-cancelar" />
+            <q-btn label="Guardar" type="submit" class="btn-guardar" />
+          </q-card-actions>
+        </q-form>
       </q-card>
     </q-dialog>
   </div>
@@ -132,10 +138,11 @@ import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 
 const $q = useQuasar()
-
 const salas = ref([])
 const especialidadesOptions = ref([])
 const dialog = ref(false)
+const formRef = ref(null)
+const backendErrors = ref({})
 
 const salaForm = reactive({
   id: null,
@@ -145,42 +152,17 @@ const salaForm = reactive({
   especialidad_id: null,
 })
 
-const reglasNombre = [
-  (val) => !!val || 'El nombre es obligatorio',
-  (val) => val.length >= 3 || 'El nombre debe tener al menos 3 caracteres',
-]
-
-const reglasTipo = [
-  (val) => !!val || 'El tipo es obligatorio',
-  (val) => val.length >= 3 || 'El tipo debe tener al menos 3 caracteres',
-]
-
-const reglasEspecialidad = [(val) => !!val || 'Debe seleccionar una especialidad']
-
-const isFormValid = computed(() => {
-  return (
-    salaForm.nombre.trim().length >= 3 &&
-    salaForm.tipo.trim().length >= 3 &&
-    salaForm.especialidad_id !== null
-  )
+const salasActivas = computed(() => {
+  return salas.value.filter((s) => s.estado)
 })
 
 const getSalaIcon = (tipo) => {
-  const iconMap = {
-    emergencia: 'emergency',
-    cirugia: 'healing',
-    consulta: 'medical_information',
-    laboratorio: 'science',
-    radiologia: 'camera_alt',
-    pediatria: 'child_care',
-    cardiologia: 'favorite',
-    neurologia: 'psychology',
-    oncologia: 'local_hospital',
-    default: 'meeting_room',
-  }
-
   const tipoLower = tipo ? tipo.toLowerCase() : ''
-  return iconMap[tipoLower] || iconMap.default
+  if (tipoLower.includes('quirófano')) return 'healing'
+  if (tipoLower.includes('consultorio')) return 'medical_information'
+  if (tipoLower.includes('laboratorio')) return 'science'
+  if (tipoLower.includes('terapia intensiva')) return 'emergency'
+  return 'meeting_room'
 }
 
 const fetchSalas = async () => {
@@ -188,7 +170,6 @@ const fetchSalas = async () => {
     const { data } = await api.get('/salas')
     salas.value = data
   } catch (error) {
-    // CORREGIDO: Se usa la variable 'error' en un console.error.
     console.error('Error al cargar salas:', error)
     $q.notify({ type: 'negative', message: 'Error al cargar salas' })
   }
@@ -197,77 +178,10 @@ const fetchSalas = async () => {
 const fetchEspecialidades = async () => {
   try {
     const { data } = await api.get('/especialidades')
-    especialidadesOptions.value = data.filter((e) => e.estado) // Solo mostrar especialidades activas
+    especialidadesOptions.value = data.filter((e) => e.estado)
   } catch (error) {
-    // CORREGIDO: Se usa la variable 'error' en un console.error.
     console.error('Error al cargar especialidades:', error)
     $q.notify({ type: 'negative', message: 'Error al cargar especialidades' })
-  }
-}
-
-const openAddDialog = () => {
-  resetForm()
-  dialog.value = true
-}
-
-const openEditDialog = (sala) => {
-  Object.assign(salaForm, sala)
-  dialog.value = true
-}
-
-const saveSala = async () => {
-  if (!isFormValid.value) {
-    $q.notify({
-      type: 'negative',
-      message: 'Por favor completa todos los campos correctamente.',
-    })
-    return
-  }
-
-  try {
-    const payload = {
-      nombre: salaForm.nombre.trim(),
-      tipo: salaForm.tipo.trim(),
-      estado: salaForm.estado,
-      especialidad_id: salaForm.especialidad_id,
-    }
-
-    if (salaForm.id) {
-      await api.put(`/salas/${salaForm.id}`, payload)
-      $q.notify({
-        type: 'positive',
-        message: 'Sala actualizada correctamente',
-      })
-    } else {
-      await api.post('/salas', payload)
-      $q.notify({
-        type: 'positive',
-        message: 'Sala creada correctamente',
-      })
-    }
-
-    dialog.value = false
-    await fetchSalas()
-  } catch (error) {
-    // CORREGIDO: Se usa la variable 'error' en un console.error.
-    console.error('Error al guardar la sala:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error al guardar la sala',
-    })
-  }
-}
-
-const toggleEstado = async (sala) => {
-  try {
-    await api.delete(`/salas/${sala.id}`)
-    const message = sala.estado ? 'Sala Desactivada' : 'Sala Activada'
-    $q.notify({ type: 'info', message })
-    await fetchSalas()
-  } catch (error) {
-    // CORREGIDO: Se usa la variable 'error' en un console.error.
-    console.error('Error al cambiar estado:', error)
-    $q.notify({ type: 'negative', message: 'Error al cambiar estado' })
   }
 }
 
@@ -278,6 +192,71 @@ const resetForm = () => {
     tipo: '',
     estado: true,
     especialidad_id: null,
+  })
+  formRef.value?.resetValidation()
+  backendErrors.value = {}
+}
+
+const openAddDialog = () => {
+  resetForm()
+  dialog.value = true
+}
+
+// --- AQUÍ ESTÁ LA CORRECCIÓN CLAVE ---
+const openEditDialog = (sala) => {
+  resetForm()
+  // Hacemos una copia y convertimos los campos necesarios a mayúsculas
+  // para que coincidan con las opciones del q-select y la validación del backend.
+  const salaParaFormulario = { ...sala }
+  salaParaFormulario.nombre = sala.nombre.toUpperCase()
+  salaParaFormulario.tipo = sala.tipo.toUpperCase()
+
+  Object.assign(salaForm, salaParaFormulario)
+  dialog.value = true
+}
+
+const saveSala = async () => {
+  backendErrors.value = {}
+  const isValid = await formRef.value.validate()
+  if (!isValid) return
+
+  try {
+    const payload = { ...salaForm }
+    if (salaForm.id) {
+      await api.put(`/salas/${salaForm.id}`, payload)
+      $q.notify({ type: 'positive', message: 'Sala actualizada' })
+    } else {
+      await api.post('/salas', payload)
+      $q.notify({ type: 'positive', message: 'Sala creada' })
+    }
+    dialog.value = false
+    await fetchSalas()
+  } catch (error) {
+    console.error('Error al guardar la sala:', error)
+    if (error.response && error.response.status === 422) {
+      backendErrors.value = error.response.data.errors
+    } else {
+      $q.notify({ type: 'negative', message: 'Error inesperado al guardar la sala' })
+    }
+  }
+}
+
+const eliminarSala = (sala) => {
+  $q.dialog({
+    title: 'Confirmar Eliminación',
+    message: `¿Estás seguro de que quieres eliminar la sala "${sala.nombre}"?`,
+    cancel: { label: 'Cancelar', flat: true },
+    ok: { label: 'Eliminar', color: 'red-8' },
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      await api.delete(`/salas/${sala.id}`)
+      salas.value = salas.value.filter((s) => s.id !== sala.id)
+      $q.notify({ type: 'info', message: 'La sala ha sido eliminada.' })
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Error al eliminar la sala'
+      $q.notify({ type: 'negative', message: errorMessage, icon: 'warning' })
+    }
   })
 }
 
@@ -370,11 +349,6 @@ onMounted(() => {
   color: white;
   font-weight: 600;
 }
-.estado-inactivo {
-  background: #991b1b;
-  color: white;
-  font-weight: 600;
-}
 .btn-editar {
   background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   color: white;
@@ -382,11 +356,6 @@ onMounted(() => {
 }
 .btn-inactivar {
   background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
-  color: white;
-  flex: 1;
-}
-.btn-activar {
-  background: linear-gradient(135deg, #065f46 0%, #059669 100%);
   color: white;
   flex: 1;
 }
@@ -431,11 +400,6 @@ onMounted(() => {
 @media (min-width: 600px) {
   .dialog-card {
     max-width: 600px;
-  }
-}
-@media (min-width: 1025px) {
-  .dialog-card {
-    max-width: 700px;
   }
 }
 .input-field {

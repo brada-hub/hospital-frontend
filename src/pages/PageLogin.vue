@@ -129,10 +129,11 @@
                 <q-btn
                   flat
                   dense
-                  label="Contacta a Soporte"
+                  label="Contactar por WhatsApp"
                   color="teal-6"
                   class="support-btn"
                   no-caps
+                  @click="contactarPorWhatsApp"
                 />
               </div>
 
@@ -161,7 +162,22 @@ const userStore = useUserStore()
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const contactarPorWhatsApp = () => {
+  // Número al que se enviará el mensaje. No necesita el '+'
+  const phoneNumber = '59167544099'
 
+  // El mensaje predefinido y "piola" que me pediste.
+  // encodeURIComponent() se asegura de que los espacios y caracteres especiales funcionen bien en la URL.
+  const message = encodeURIComponent(
+    'Hola, tengo problemas para ingresar al sistema. Necesito asistencia, por favor.',
+  )
+
+  // La URL mágica de WhatsApp
+  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`
+
+  // Abrimos WhatsApp en una nueva pestaña para no cerrar la página de login
+  window.open(whatsappUrl, '_blank')
+}
 const handleLogin = async () => {
   try {
     const destination = await userStore.login(email.value, password.value)

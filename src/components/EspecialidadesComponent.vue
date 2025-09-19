@@ -13,12 +13,7 @@
     </div>
 
     <div class="salas-grid">
-      <div
-        v-for="item in especialidades"
-        :key="item.id"
-        class="sala-card"
-        :class="{ 'card-inactivo': !item.estado }"
-      >
+      <div v-for="item in especialidadesActivas" :key="item.id" class="sala-card">
         <div class="card-header">
           <div class="sala-info">
             <q-icon name="medical_services" class="sala-icon" size="2rem" />
@@ -27,18 +22,14 @@
               <h3 class="sala-nombre">{{ item.nombre }}</h3>
             </div>
           </div>
-          <q-chip
-            :class="item.estado ? 'estado-activo' : 'estado-inactivo'"
-            :label="item.estado ? 'Activo' : 'Inactivo'"
-            dense
-          />
+          <q-chip class="estado-activo" label="Activo" dense />
         </div>
 
         <div class="card-body">
           <div class="info-item">
             <q-icon name="description" class="info-icon" />
             <span class="info-label">Descripción:</span>
-            <span class="info-value">{{ item.descripcion }}</span>
+            <span class="info-value">{{ item.descripcion || 'Sin descripción' }}</span>
           </div>
         </div>
 
@@ -55,10 +46,10 @@
           <q-btn
             flat
             dense
-            :class="item.estado ? 'btn-inactivar' : 'btn-activar'"
-            :icon="item.estado ? 'block' : 'check'"
-            :label="item.estado ? 'Desactivar' : 'Activar'"
-            @click="cambiarEstado(item)"
+            class="btn-inactivar"
+            icon="delete"
+            label="Eliminar"
+            @click="eliminarEspecialidad(item)"
             no-caps
           />
         </div>
@@ -74,70 +65,73 @@
 
     <q-dialog v-model="mostrarDialog" persistent>
       <q-card class="dialog-card">
-        <q-card-section class="dialog-header">
-          <div class="dialog-title">
-            {{ formulario.id ? 'Editar Especialidad' : 'Añadir Especialidad' }}
-          </div>
-        </q-card-section>
-        <q-card-section class="dialog-content">
-          <q-input
-            v-model="formulario.nombre"
-            label="Nombre *"
-            outlined
-            dense
-            class="input-field"
-            :rules="[(val) => (val && val.length > 0) || 'El nombre es requerido']"
-          />
-          <q-input
-            v-model="formulario.descripcion"
-            label="Descripción *"
-            outlined
-            dense
-            type="textarea"
-            rows="3"
-            class="input-field"
-            :rules="[(val) => (val && val.length > 0) || 'La descripción es requerida']"
-          />
-          <q-toggle
-            v-model="formulario.estado"
-            :label="formulario.estado ? 'Estado: Activo' : 'Estado: Inactivo'"
-            :color="formulario.estado ? 'teal' : 'red'"
-            left-label
-            class="q-mt-md"
-          />
-        </q-card-section>
-        <q-card-actions align="right" class="dialog-actions">
-          <q-btn flat label="Cancelar" v-close-popup class="btn-cancelar" />
-          <q-btn
-            label="Guardar"
-            @click="guardarEspecialidad"
-            class="btn-guardar"
-            :disable="!esFormularioValido"
-          />
-        </q-card-actions>
+        <q-form ref="formRef" @submit.prevent="guardarEspecialidad">
+          <q-card-section class="dialog-header">
+            <div class="dialog-title">
+              {{ formulario.id ? 'Editar Especialidad' : 'Añadir Especialidad' }}
+            </div>
+          </q-card-section>
+          <q-card-section class="dialog-content">
+            <q-input
+              v-model="formulario.nombre"
+              label="Nombre *"
+              outlined
+              dense
+              class="input-field"
+              :rules="[
+                (val) => !!val || 'El nombre es requerido',
+                (val) => val.length <= 100 || 'Máximo 100 caracteres',
+                (val) =>
+                  /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s-]+$/.test(val) || 'Solo letras, espacios y guiones',
+              ]"
+              :error="!!backendErrors.nombre"
+              :error-message="backendErrors.nombre ? backendErrors.nombre[0] : ''"
+              @update:model-value="backendErrors.nombre = null"
+            />
+            <q-input
+              v-model="formulario.descripcion"
+              label="Descripción"
+              outlined
+              dense
+              type="textarea"
+              rows="3"
+              class="input-field"
+              :rules="[(val) => !val || val.length <= 255 || 'Máximo 255 caracteres']"
+            />
+          </q-card-section>
+          <q-card-actions align="right" class="dialog-actions">
+            <q-btn flat label="Cancelar" v-close-popup class="btn-cancelar" />
+            <q-btn label="Guardar" type="submit" class="btn-guardar" />
+          </q-card-actions>
+        </q-form>
       </q-card>
     </q-dialog>
   </div>
 </template>
+
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
+import { useUserStore } from 'stores/user'
 
 const $q = useQuasar()
+const userStore = useUserStore()
 const especialidades = ref([])
 const mostrarDialog = ref(false)
+const formRef = ref(null)
+const backendErrors = ref({})
 
 const formulario = reactive({
   id: null,
   nombre: '',
   descripcion: '',
   estado: true,
-  hospital_id: 1, // Asumimos un ID de hospital fijo
+  hospital_id: null,
 })
 
-const esFormularioValido = computed(() => {
-  return formulario.nombre.trim().length >= 3 && formulario.descripcion.trim().length >= 3
+const especialidadesActivas = computed(() => {
+  return especialidades.value.filter((e) => e.estado)
 })
 
 const cargarEspecialidades = async () => {
@@ -151,24 +145,29 @@ const cargarEspecialidades = async () => {
 }
 
 const abrirDialogoAgregar = () => {
+  formRef.value?.resetValidation()
+  backendErrors.value = {}
   Object.assign(formulario, {
     id: null,
     nombre: '',
     descripcion: '',
     estado: true,
-    hospital_id: 1,
+    hospital_id: userStore.hospital?.id,
   })
   mostrarDialog.value = true
 }
 
 const editarEspecialidad = (especialidad) => {
+  formRef.value?.resetValidation()
+  backendErrors.value = {}
   Object.assign(formulario, { ...especialidad })
   mostrarDialog.value = true
 }
 
-// CORREGIDO: Se mejora el manejo de errores en esta función
 const guardarEspecialidad = async () => {
-  if (!esFormularioValido.value) return
+  backendErrors.value = {}
+  const isValid = await formRef.value.validate()
+  if (!isValid) return
 
   try {
     const payload = { ...formulario }
@@ -183,37 +182,37 @@ const guardarEspecialidad = async () => {
     await cargarEspecialidades()
   } catch (error) {
     console.error('Error al guardar especialidad:', error)
-
-    // Lógica mejorada para mostrar errores de validación de Laravel
     if (error.response && error.response.status === 422) {
-      const errors = error.response.data.errors
-      let errorMessage = 'Por favor, corrige los siguientes errores:'
-      // Muestra cada error en una nueva línea
-      for (const key in errors) {
-        errorMessage += `<br>- ${errors[key][0]}`
-      }
-      $q.notify({
-        type: 'negative',
-        message: errorMessage,
-        html: true, // Permite que <br> funcione
-        timeout: 7000,
-      })
+      backendErrors.value = error.response.data.errors
     } else {
-      // Muestra un error genérico si no es de validación
       $q.notify({ type: 'negative', message: 'Error inesperado al guardar' })
     }
   }
 }
 
-const cambiarEstado = async (especialidad) => {
-  try {
-    await api.delete(`/especialidades/${especialidad.id}`)
-    await cargarEspecialidades()
-    $q.notify({ type: 'info', message: 'El estado ha sido actualizado.' })
-  } catch (error) {
-    console.error('Error al cambiar estado:', error)
-    $q.notify({ type: 'negative', message: 'Error al cambiar estado' })
-  }
+const eliminarEspecialidad = (especialidad) => {
+  $q.dialog({
+    title: 'Confirmar Eliminación',
+    message: `¿Estás seguro de que quieres eliminar la especialidad "${especialidad.nombre}"?`,
+    cancel: { label: 'Cancelar', flat: true },
+    ok: { label: 'Eliminar', color: 'red-8' },
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      await api.delete(`/especialidades/${especialidad.id}`)
+      especialidades.value = especialidades.value.filter((e) => e.id !== especialidad.id)
+      $q.notify({ type: 'info', message: 'La especialidad ha sido eliminada.' })
+    } catch (error) {
+      // --- LÓGICA MEJORADA PARA MOSTRAR EL ERROR DEL BACKEND ---
+      const errorMessage = error.response?.data?.message || 'Error al eliminar la especialidad'
+
+      $q.notify({
+        type: 'negative',
+        message: errorMessage,
+        icon: 'warning', // Un ícono más apropiado para este tipo de error
+      })
+    }
+  })
 }
 
 onMounted(() => {
@@ -274,8 +273,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
 }
-
-/* ESTILOS DE LA TARJETA (HEADER) */
 .card-header {
   background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   color: white;
@@ -306,24 +303,14 @@ onMounted(() => {
   font-weight: 700;
   line-height: 1.2;
 }
-
-/* ESTILOS DEL CHIP DE ESTADO */
-.estado-activo,
-.estado-inactivo {
+.estado-activo {
   color: white;
   font-weight: 600;
   font-size: 0.75rem;
   padding: 2px 8px;
   border-radius: 99px;
-}
-.estado-activo {
   background: rgba(16, 185, 129, 0.8);
 }
-.estado-inactivo {
-  background: rgba(239, 68, 68, 0.8);
-}
-
-/* ESTILOS DEL CUERPO Y ACCIONES DE LA TARJETA */
 .card-body {
   padding: 20px;
   background: #f8fafc;
@@ -352,13 +339,11 @@ onMounted(() => {
   gap: 12px;
   background: #f8fafc;
 }
-
 .btn-editar,
-.btn-inactivar,
-.btn-activar {
+.btn-inactivar {
   flex: 1;
   font-weight: 600;
-  border-radius: 0px;
+  border-radius: 8px;
   color: white;
   transition: all 0.3s ease;
 }
@@ -368,18 +353,10 @@ onMounted(() => {
 .btn-inactivar {
   background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
 }
-.btn-activar {
-  background: linear-gradient(135deg, #065f46 0%, #059669 100%);
-}
 .btn-editar:hover,
-.btn-inactivar:hover,
-.btn-activar:hover {
+.btn-inactivar:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.2);
-}
-
-.card-inactivo {
-  background-color: #fef2f2;
 }
 .add-card {
   border: 2px dashed #0d9488;
@@ -401,8 +378,6 @@ onMounted(() => {
 .add-text {
   font-weight: 600;
 }
-
-/* ESTILOS DEL MODAL */
 .dialog-card {
   width: 90vw;
   max-width: 450px;
@@ -431,9 +406,5 @@ onMounted(() => {
   color: white;
   border-radius: 12px;
   padding: 8px 24px;
-}
-.btn-guardar:disabled {
-  background: #cccccc;
-  color: #666666;
 }
 </style>

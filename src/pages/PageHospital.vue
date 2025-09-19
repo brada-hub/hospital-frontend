@@ -22,10 +22,15 @@
                   filled
                   :bg-color="editMode ? 'white' : 'grey-2'"
                   class="hospital-input elegant-input"
+                  lazy-rules
                   :rules="[
                     (val) => !!val || 'El nombre es requerido',
-                    (val) => /^[a-zA-Z\s]+$/.test(val) || 'Solo se permiten letras',
+                    (val) => val.length <= 100 || 'Máximo 100 caracteres',
+                    (val) => /^[a-zA-Z\s]+$/.test(val) || 'Solo se permiten letras y espacios',
                   ]"
+                  :error="!!backendErrors.nombre"
+                  :error-message="backendErrors.nombre ? backendErrors.nombre[0] : ''"
+                  @update:model-value="backendErrors.nombre = null"
                   ><template v-slot:prepend
                     ><q-icon name="local_hospital" class="input-icon" /></template
                 ></q-input>
@@ -37,8 +42,9 @@
                   :readonly="!editMode"
                   filled
                   :bg-color="editMode ? 'white' : 'grey-2'"
-                  :options="['La Paz', 'Cochabamba', 'Santa Cruz']"
+                  :options="['LA PAZ', 'COCHABAMBA', 'SANTA CRUZ']"
                   class="hospital-input elegant-input"
+                  lazy-rules
                   :rules="[(val) => !!val || 'El departamento es requerido']"
                   ><template v-slot:prepend><q-icon name="business" class="input-icon" /></template
                 ></q-select>
@@ -51,8 +57,10 @@
                   filled
                   :bg-color="editMode ? 'white' : 'grey-2'"
                   class="hospital-input elegant-input"
+                  lazy-rules
                   :rules="[
                     (val) => !!val || 'La dirección es requerida',
+                    (val) => val.length <= 255 || 'Máximo 255 caracteres',
                     (val) => /^[a-zA-Z0-9\s#.,-]+$/.test(val) || 'Caracteres no válidos',
                   ]"
                   ><template v-slot:prepend
@@ -66,8 +74,9 @@
                   :readonly="!editMode"
                   filled
                   :bg-color="editMode ? 'white' : 'grey-2'"
-                  :options="['Nivel 1', 'Nivel 2', 'Nivel 3']"
+                  :options="['NIVEL 1', 'NIVEL 2', 'NIVEL 3']"
                   class="hospital-input elegant-input"
+                  lazy-rules
                   :rules="[(val) => !!val || 'El nivel es requerido']"
                   ><template v-slot:prepend><q-icon name="star" class="input-icon" /></template
                 ></q-select>
@@ -79,8 +88,9 @@
                   :readonly="!editMode"
                   filled
                   :bg-color="editMode ? 'white' : 'grey-2'"
-                  :options="['Público', 'Privado']"
+                  :options="['PÚBLICO', 'PRIVADO']"
                   class="hospital-input elegant-input"
+                  lazy-rules
                   :rules="[(val) => !!val || 'El tipo es requerido']"
                   ><template v-slot:prepend
                     ><q-icon name="account_balance" class="input-icon" /></template
@@ -96,17 +106,15 @@
                   :bg-color="editMode ? 'white' : 'grey-2'"
                   class="hospital-input elegant-input"
                   mask="########"
+                  lazy-rules
                   :rules="[
-                    (val) => {
-                      if (!val) return 'El teléfono es requerido'
-                      const num = parseInt(String(val).trim())
-                      if (isNaN(num)) return 'Debe ser un número válido'
-                      if (String(num).length !== 8) return 'Debe tener 8 dígitos'
-                      if (num < 60000000 || num > 79999999)
-                        return 'Debe estar entre 60000000 y 79999999'
-                      return true
-                    },
+                    (val) => !!val || 'El teléfono es requerido',
+                    (val) => /^\d{8}$/.test(val) || 'Debe tener 8 dígitos',
+                    (val) => (val >= 60000000 && val <= 79999999) || 'Número de celular no válido',
                   ]"
+                  :error="!!backendErrors.telefono"
+                  :error-message="backendErrors.telefono ? backendErrors.telefono[0] : ''"
+                  @update:model-value="backendErrors.telefono = null"
                 >
                   <template v-slot:prepend>
                     <q-icon name="phone" class="input-icon" />
@@ -188,7 +196,6 @@ import { useQuasar } from 'quasar'
 import { useUserStore } from 'stores/user'
 import { api } from 'boot/axios'
 
-// AÑADIDO: Importamos los componentes para las pestañas
 import EspecialidadesComponent from 'src/components/EspecialidadesComponent.vue'
 import SalasComponent from 'src/components/SalasComponent.vue'
 import CamasComponent from 'src/components/CamasComponent.vue'
@@ -202,25 +209,14 @@ const originalHospitalData = ref({})
 const editMode = ref(false)
 const isSaving = ref(false)
 const activeTab = ref('especialidades')
+const backendErrors = ref({})
 
 const fetchHospitalDetails = () => {
   if (userStore.hospital && userStore.hospital.id) {
     hospital.value = { ...userStore.hospital }
     originalHospitalData.value = { ...userStore.hospital }
-
-    $q.notify({
-      type: 'positive',
-      message: 'Datos del hospital cargados correctamente',
-      position: 'top',
-      icon: 'check_circle',
-    })
   } else {
-    $q.notify({
-      type: 'negative',
-      message: 'No se pudo cargar la información del hospital.',
-      position: 'top',
-      icon: 'error',
-    })
+    $q.notify({ type: 'negative', message: 'No se pudo cargar la información del hospital.' })
   }
 }
 
@@ -229,42 +225,58 @@ onMounted(() => {
 })
 
 const toggleEditMode = () => {
+  backendErrors.value = {}
   if (editMode.value) {
+    // Al CANCELAR, restaura los datos originales (formato Título, bonitos)
     hospital.value = { ...originalHospitalData.value }
+  } else {
+    // Al ENTRAR en modo edición, convierte los datos a MAYÚSCULAS para el formulario
+    hospital.value.nombre = hospital.value.nombre.toUpperCase()
+    hospital.value.departamento = hospital.value.departamento.toUpperCase()
+    hospital.value.nivel = hospital.value.nivel.toUpperCase()
+    hospital.value.tipo = hospital.value.tipo.toUpperCase()
   }
   editMode.value = !editMode.value
 }
 
 const saveHospital = async () => {
+  backendErrors.value = {}
   const isValid = await hospitalForm.value.validate()
-  if (!isValid) return
+  if (!isValid) {
+    $q.notify({ type: 'warning', message: 'Por favor, revisa los campos marcados en rojo.' })
+    return
+  }
 
   isSaving.value = true
   try {
     const hospitalId = hospital.value.id
     if (!hospitalId) throw new Error('ID del hospital no encontrado.')
 
+    // El objeto 'hospital' ya está en MAYÚSCULAS gracias a la lógica de toggleEditMode,
+    // así que lo podemos enviar directamente.
     const response = await api.put(`/hospitals/${hospitalId}`, hospital.value)
 
+    // Guardamos los nuevos datos originales (que vienen en formato Título del backend)
     originalHospitalData.value = { ...response.data }
     userStore.hospital = { ...response.data }
     localStorage.setItem('hospital', JSON.stringify(userStore.hospital))
 
+    // Sincronizamos la vista con los nuevos datos formateados
+    hospital.value = { ...response.data }
+
     $q.notify({
       type: 'positive',
       message: 'Hospital actualizado correctamente',
-      position: 'top',
-      icon: 'check_circle',
     })
     editMode.value = false
   } catch (error) {
-    console.error('Error al guardar los detalles del hospital', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error al guardar los datos. Inténtalo de nuevo.',
-      position: 'top',
-      icon: 'error',
-    })
+    if (error.response && error.response.status === 422) {
+      backendErrors.value = error.response.data.errors
+      $q.notify({ type: 'negative', message: 'Datos inválidos. Revisa el formulario.' })
+    } else {
+      console.error('Error al guardar los detalles del hospital', error)
+      $q.notify({ type: 'negative', message: 'Error al guardar los datos.' })
+    }
   } finally {
     isSaving.value = false
   }
@@ -272,7 +284,7 @@ const saveHospital = async () => {
 </script>
 
 <style scoped>
-/* Tus excelentes estilos van aquí */
+/* Tus excelentes estilos van aquí (sin cambios) */
 .hospital-page {
   min-height: 100vh;
   background: #f8fafc;

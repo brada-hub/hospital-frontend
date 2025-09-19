@@ -5,7 +5,8 @@
     </div>
 
     <div class="acordeon-container">
-      <div v-for="sala in salas" :key="sala.id" class="sala-acordeon-item">
+      <!-- CORREGIDO: Ahora itera sobre las salas activas, sin importar si tienen camas -->
+      <div v-for="sala in salasActivas" :key="sala.id" class="sala-acordeon-item">
         <div class="sala-acordeon-header" @click="toggleExpansion(sala.id)">
           <div class="sala-info">
             <q-icon name="meeting_room" class="sala-icon" size="2rem" />
@@ -24,12 +25,7 @@
         <q-slide-transition>
           <div v-show="expandedSalaId === sala.id" class="camas-desplegable">
             <div class="camas-grid">
-              <div
-                v-for="cama in getCamasBySala(sala.id)"
-                :key="cama.id"
-                class="sala-card"
-                :class="{ 'card-inactivo': !cama.estado }"
-              >
+              <div v-for="cama in getCamasActivasPorSala(sala.id)" :key="cama.id" class="sala-card">
                 <div
                   class="card-header"
                   :style="{ background: getDisponibilidadInfo(cama.disponibilidad).gradient }"
@@ -41,11 +37,7 @@
                       <h3 class="sala-nombre">{{ cama.nombre }}</h3>
                     </div>
                   </div>
-                  <q-chip
-                    :class="cama.estado ? 'estado-activo' : 'estado-inactivo'"
-                    :label="cama.estado ? 'Activo' : 'Inactivo'"
-                    dense
-                  />
+                  <q-chip class="estado-activo" label="Activo" dense />
                 </div>
                 <div class="card-body">
                   <div class="info-item">
@@ -84,10 +76,10 @@
                   <q-btn
                     flat
                     dense
-                    :class="cama.estado ? 'btn-inactivar' : 'btn-activar'"
-                    :icon="cama.estado ? 'block' : 'check'"
-                    :label="cama.estado ? 'Desactivar' : 'Activar'"
-                    @click="toggleCamaEstado(cama)"
+                    class="btn-inactivar"
+                    icon="delete"
+                    label="Eliminar"
+                    @click="eliminarCama(cama)"
                     no-caps
                   />
                 </div>
@@ -107,50 +99,59 @@
 
     <q-dialog v-model="camaDialog" persistent>
       <q-card class="dialog-card">
-        <q-card-section class="dialog-header">
-          <div class="dialog-title">{{ camaForm.id ? 'Editar Cama' : 'Añadir Nueva Cama' }}</div>
-        </q-card-section>
-        <q-card-section class="dialog-content">
-          <q-input
-            v-model="camaForm.nombre"
-            label="Nombre *"
-            outlined
-            dense
-            class="input-field"
-            :rules="reglasGenericas"
-          />
-          <q-input
-            v-model="camaForm.tipo"
-            label="Tipo *"
-            outlined
-            dense
-            class="input-field"
-            :rules="reglasGenericas"
-          />
-
-          <q-select
-            v-model="camaForm.disponibilidad"
-            :options="opcionesDisponibilidad"
-            label="Disponibilidad *"
-            emit-value
-            map-options
-            outlined
-            dense
-            class="input-field"
-          />
-
-          <q-toggle
-            v-model="camaForm.estado"
-            :label="camaForm.estado ? 'Estado: Activo' : 'Estado: Inactivo'"
-            :color="camaForm.estado ? 'teal' : 'red'"
-            left-label
-            class="q-mt-md"
-          />
-        </q-card-section>
-        <q-card-actions align="right" class="dialog-actions">
-          <q-btn flat label="Cancelar" v-close-popup class="btn-cancelar" />
-          <q-btn label="Guardar" @click="saveCama" class="btn-guardar" :disable="!isFormValido" />
-        </q-card-actions>
+        <q-form ref="formRef" @submit.prevent="saveCama">
+          <q-card-section class="dialog-header">
+            <div class="dialog-title">{{ camaForm.id ? 'Editar Cama' : 'Añadir Nueva Cama' }}</div>
+          </q-card-section>
+          <q-card-section class="dialog-content">
+            <q-input
+              v-model="camaForm.nombre"
+              label="Nombre o Código de la Cama *"
+              outlined
+              dense
+              class="input-field"
+              :rules="[
+                (val) => !!val || 'El nombre es requerido',
+                (val) => val.length <= 100 || 'Máximo 100 caracteres',
+                (val) =>
+                  /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s-]+$/.test(val) || 'Solo letras, números y guiones',
+              ]"
+              :error="!!backendErrors.nombre"
+              :error-message="backendErrors.nombre ? backendErrors.nombre[0] : ''"
+              @update:model-value="backendErrors.nombre = null"
+            />
+            <q-select
+              v-model="camaForm.tipo"
+              label="Tipo *"
+              :options="[
+                'ESTÁNDAR',
+                'PEDIÁTRICA',
+                'CUNA',
+                'INCUBADORA',
+                'CAMA UCI',
+                'CAMA QUIRÚRGICA',
+              ]"
+              outlined
+              dense
+              class="input-field"
+              :rules="[(val) => !!val || 'El tipo es requerido']"
+            />
+            <q-select
+              v-model="camaForm.disponibilidad"
+              :options="opcionesDisponibilidad"
+              label="Disponibilidad *"
+              emit-value
+              map-options
+              outlined
+              dense
+              class="input-field"
+            />
+          </q-card-section>
+          <q-card-actions align="right" class="dialog-actions">
+            <q-btn flat label="Cancelar" v-close-popup @click="resetForm" class="btn-cancelar" />
+            <q-btn label="Guardar" type="submit" class="btn-guardar" />
+          </q-card-actions>
+        </q-form>
       </q-card>
     </q-dialog>
   </div>
@@ -166,33 +167,33 @@ const salas = ref([])
 const camas = ref([])
 const camaDialog = ref(false)
 const expandedSalaId = ref(null)
+const formRef = ref(null)
+const backendErrors = ref({})
 
 const camaForm = reactive({
   id: null,
   nombre: '',
   tipo: '',
-  // CAMBIADO: 'estado' ahora es un booleano
   estado: true,
-  // AÑADIDO: 'disponibilidad' con valor por defecto
   disponibilidad: 1,
   sala_id: null,
 })
 
-// AÑADIDO: Opciones para el q-select de disponibilidad
 const opcionesDisponibilidad = [
   { label: 'Disponible', value: 1 },
   { label: 'Ocupada', value: 0 },
   { label: 'En Mantenimiento', value: 2 },
 ]
 
-const reglasGenericas = [
-  (val) => (!!val && val.trim().length >= 3) || 'Debe tener al menos 3 caracteres',
-]
-const isFormValido = computed(
-  () => camaForm.nombre.trim().length >= 3 && camaForm.tipo.trim().length >= 3,
-)
+// FILTROS CON COMPUTED PROPERTIES PARA LA VISTA
+const camasActivas = computed(() => camas.value.filter((c) => c.estado))
+const salasActivas = computed(() => salas.value.filter((s) => s.estado))
+const getCamasActivasPorSala = (salaId) =>
+  camasActivas.value.filter((cama) => cama.sala_id === salaId)
 
-// AÑADIDO: Función para obtener texto, color e ícono de la disponibilidad
+// CORREGIDO: Se elimina la computed 'salasConCamasActivas' que causaba el problema
+
+// LÓGICA DE LA INTERFAZ
 const getDisponibilidadInfo = (valor) => {
   switch (valor) {
     case 0:
@@ -230,10 +231,11 @@ const toggleExpansion = (salaId) => {
   expandedSalaId.value = expandedSalaId.value === salaId ? null : salaId
 }
 
+// PETICIONES A LA API
 const fetchSalas = async () => {
   try {
     const { data } = await api.get('/salas')
-    salas.value = data.filter((s) => s.estado) // Solo mostrar salas activas
+    salas.value = data
   } catch (error) {
     console.error('Error al cargar salas:', error)
     $q.notify({ type: 'negative', message: 'Error al cargar salas' })
@@ -250,56 +252,78 @@ const fetchCamas = async () => {
   }
 }
 
-const getCamasBySala = (salaId) => camas.value.filter((cama) => cama.sala_id === salaId)
-
-const openAddCamaDialog = (salaId) => {
-  // CAMBIADO: Se reinicia el formulario con los nuevos campos
+// LÓGICA DEL FORMULARIO
+const resetForm = () => {
   Object.assign(camaForm, {
     id: null,
     nombre: '',
     tipo: '',
     estado: true,
     disponibilidad: 1,
-    sala_id: salaId,
+    sala_id: null,
   })
+  formRef.value?.resetValidation()
+  backendErrors.value = {}
+}
+
+const openAddCamaDialog = (salaId) => {
+  resetForm()
+  camaForm.sala_id = salaId
   camaDialog.value = true
 }
 
 const openEditCamaDialog = (cama) => {
-  Object.assign(camaForm, { ...cama })
+  resetForm()
+  const camaParaFormulario = { ...cama }
+  camaParaFormulario.nombre = cama.nombre.toUpperCase()
+  camaParaFormulario.tipo = cama.tipo.toUpperCase()
+  Object.assign(camaForm, camaParaFormulario)
   camaDialog.value = true
 }
 
 const saveCama = async () => {
-  if (!isFormValido.value) return
+  backendErrors.value = {}
+  const isValid = await formRef.value.validate()
+  if (!isValid) return
+
   try {
-    // El 'camaForm' ya tiene los datos correctos (booleano e integer), así que se envía directamente.
+    const payload = { ...camaForm }
     if (camaForm.id) {
-      await api.put(`/camas/${camaForm.id}`, camaForm)
+      await api.put(`/camas/${camaForm.id}`, payload)
       $q.notify({ type: 'positive', message: 'Cama actualizada' })
     } else {
-      await api.post('/camas', camaForm)
+      await api.post('/camas', payload)
       $q.notify({ type: 'positive', message: 'Cama creada' })
     }
     camaDialog.value = false
     await fetchCamas()
   } catch (error) {
     console.error('Error al guardar cama:', error)
-    $q.notify({ type: 'negative', message: 'Error al guardar cama' })
+    if (error.response && error.response.status === 422) {
+      backendErrors.value = error.response.data.errors
+    } else {
+      $q.notify({ type: 'negative', message: 'Error inesperado al guardar la cama' })
+    }
   }
 }
 
-// CAMBIADO: La función ahora usa 'api.delete' y la lógica de notificación es booleana
-const toggleCamaEstado = async (cama) => {
-  try {
-    await api.delete(`camas/${cama.id}`)
-    const message = cama.estado ? 'Cama Desactivada' : 'Cama Activada'
-    $q.notify({ type: 'info', message })
-    await fetchCamas()
-  } catch (error) {
-    console.error('Error al cambiar estado de la cama:', error)
-    $q.notify({ type: 'negative', message: 'Error al cambiar estado' })
-  }
+const eliminarCama = (cama) => {
+  $q.dialog({
+    title: 'Confirmar Eliminación',
+    message: `¿Estás seguro de que quieres eliminar la cama "${cama.nombre}"?`,
+    cancel: { label: 'Cancelar', flat: true },
+    ok: { label: 'Eliminar', color: 'red-8' },
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      await api.delete(`/camas/${cama.id}`)
+      camas.value = camas.value.filter((c) => c.id !== cama.id)
+      $q.notify({ type: 'info', message: 'La cama ha sido eliminada.' })
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Error al eliminar la cama'
+      $q.notify({ type: 'negative', message: errorMessage, icon: 'warning' })
+    }
+  })
 }
 
 onMounted(() => {
@@ -309,7 +333,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ESTILOS GENERALES Y DE HEADER */
+/* Tus estilos (no necesitan cambios) */
 .salas-container {
   padding: 24px;
   background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
@@ -329,8 +353,6 @@ onMounted(() => {
   font-size: 1.75rem;
   margin: 0;
 }
-
-/* ESTILOS DEL ACORDEÓN */
 .acordeon-container {
   display: grid;
   gap: 16px;
@@ -380,8 +402,6 @@ onMounted(() => {
 .expand-icon.is-expanded {
   transform: rotate(180deg);
 }
-
-/* GRID Y TARJETAS DE CAMAS */
 .camas-desplegable {
   padding: 20px;
   background-color: #f8fafc;
@@ -425,7 +445,7 @@ onMounted(() => {
 .btn-activar {
   flex: 1;
   font-weight: 600;
-  border-radius: 0;
+  border-radius: 8px;
   color: white;
 }
 .btn-editar {
@@ -434,21 +454,9 @@ onMounted(() => {
 .btn-inactivar {
   background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
 }
-.btn-activar {
-  background: linear-gradient(135deg, #065f46 0%, #059669 100%);
-}
 .estado-activo {
   background: rgba(255, 255, 255, 0.2);
   color: white;
-}
-.estado-inactivo {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  font-style: italic;
-}
-.card-inactivo {
-  opacity: 0.7;
-  background-color: #f1f5f9;
 }
 .info-item {
   display: flex;
@@ -520,9 +528,5 @@ onMounted(() => {
   color: white;
   border-radius: 12px;
   padding: 8px 24px;
-}
-.btn-guardar:disabled {
-  background: #cccccc;
-  color: #666666;
 }
 </style>
