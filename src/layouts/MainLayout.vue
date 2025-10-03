@@ -88,15 +88,31 @@
         <q-item
           clickable
           v-ripple
-          to="/hospital"
-          v-if="userStore.hasPermission('acceso.hospital')"
+          to="/mis-pacientes"
           class="nav-item"
           active-class="nav-item-active"
-          ><q-item-section avatar><q-icon name="local_hospital" class="nav-icon" /></q-item-section
-          ><q-item-section
-            ><q-item-label class="nav-label">Hospital</q-item-label></q-item-section
-          ></q-item
+          v-if="userStore.hasPermission('acceso.mis-pacientes')"
         >
+          <q-item-section avatar
+            ><q-icon name="medication_liquid" class="nav-icon"
+          /></q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Mis Pacientes</q-item-label>
+          </q-item-section>
+        </q-item>
+        <q-item
+          clickable
+          v-ripple
+          to="/estacion-enfermeria"
+          class="nav-item"
+          active-class="nav-item-active"
+          v-if="userStore.hasPermission('acceso.estacion-enfermeria')"
+        >
+          <q-item-section avatar><q-icon name="local_pharmacy" class="nav-icon" /></q-item-section>
+          <q-item-section
+            ><q-item-label class="nav-label">Estación de Enfermería</q-item-label></q-item-section
+          >
+        </q-item>
       </q-list>
 
       <div class="drawer-footer">

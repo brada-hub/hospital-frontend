@@ -31,11 +31,11 @@
       <q-separator class="elegant-separator" />
 
       <q-tab-panels v-model="activeTab" animated class="elegant-panels">
-        <q-tab-panel name="gestionar-usuarios" class="q-pa-none">
+        <q-tab-panel name="gestionar-usuarios" class="q-pa-none elegant-tab-panel">
           <GestionarUsuarios :roles="rols" :all-permissions="allPermissions" />
         </q-tab-panel>
 
-        <q-tab-panel name="roles-permisos" class="q-pa-none">
+        <q-tab-panel name="roles-permisos" class="q-pa-none elegant-tab-panel">
           <RolesPermisos
             :roles="rols"
             :all-permissions="allPermissions"
@@ -87,16 +87,17 @@ onMounted(() => {
 })
 </script>
 
+---
+
 <style scoped>
-/* === ESTILOS COPIADOS Y CORREGIDOS PARA SER IGUAL A HOSPITALPAGE === */
 .page-container {
   padding: 24px;
-  background: #f8fafc; /* <-- FONDO CORREGIDO A GRIS CLARO */
-  min-height: 100vh;
+  background: #f8fafc;
 }
 
 .page-header {
   margin-bottom: 32px;
+  flex-shrink: 0; /* ✨ No se encoge */
 }
 
 .page-title {
@@ -123,6 +124,9 @@ onMounted(() => {
   border: 1px solid #e2e8f0;
   overflow: hidden;
   position: relative;
+  flex-grow: 1; /* ✨ La tarjeta crece para llenar el espacio vertical */
+  display: flex; /* ✨ Y se convierte en un flexbox para organizar su contenido */
+  flex-direction: column; /* ✨ En columna */
 }
 
 .elegant-card::before {
@@ -139,6 +143,7 @@ onMounted(() => {
 .elegant-tabs {
   background: #f8fafc;
   padding: 8px;
+  flex-shrink: 0; /* ✨ No se encoge */
 }
 
 .elegant-tab {
@@ -155,9 +160,16 @@ onMounted(() => {
   background: linear-gradient(90deg, transparent 0%, #14b8a6 50%, transparent 100%);
   height: 1px;
   opacity: 0.5;
+  flex-shrink: 0; /* ✨ No se encoge */
 }
 
 .elegant-panels {
   background: white;
+  /* ❌ Se eliminaron las reglas de flexbox */
+}
+
+.elegant-tab-panel {
+  /* No necesita estilos especiales aquí */
+  padding: 0 !important;
 }
 </style>

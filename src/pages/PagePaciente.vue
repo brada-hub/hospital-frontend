@@ -1,304 +1,441 @@
 <template>
-  <q-page padding>
+  <div class="pacientes-container">
     <div class="header-section">
-      <h4 class="text-h4 text-weight-bold q-my-none">Gestión de Pacientes</h4>
-      <q-btn
-        color="primary"
-        icon="person_add"
-        label="Añadir Paciente"
-        @click="abrirDialogoCrear"
-        no-caps
-      />
+      <h2 class="titulo-principal">Gestión de Pacientes</h2>
     </div>
 
-    <q-card flat bordered class="q-mt-md">
-      <q-card-section>
-        <q-table
-          :rows="pacientes"
-          :columns="columnas"
-          row-key="id"
-          :filter="filtro"
-          :loading="isLoading"
-          flat
-          binary-state-sort
+    <div class="table-container-card">
+      <div class="table-header-row">
+        <q-input
+          dense
+          debounce="300"
+          v-model="filter"
+          placeholder="Buscar por nombre, apellidos o CI..."
+          outlined
+          class="table-search"
         >
-          <template v-slot:top-right>
-            <q-input
-              borderless
+          <template v-slot:append>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+
+        <q-btn
+          class="btn-agregar"
+          label="Registrar Paciente"
+          icon="person_add"
+          @click="openAddPacienteDialog"
+          no-caps
+          rounded
+        />
+      </div>
+
+      <q-table
+        :rows="pacientes"
+        :columns="pacienteColumns"
+        row-key="id"
+        flat
+        class="styled-table"
+        :loading="loadingTable"
+        :filter="filter"
+      >
+        <template v-slot:body-cell-actions="props">
+          <q-td :props="props" class="text-center">
+            <q-btn
+              v-if="props.row.internacion_activa_id"
               dense
-              debounce="300"
-              v-model="filtro"
-              placeholder="Buscar paciente..."
-            >
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </template>
+              flat
+              round
+              icon="visibility"
+              class="action-btn-view"
+              @click="irAPanel(props.row.internacion_activa_id)"
+              title="Ver Panel de Internación"
+            />
 
-          <template v-slot:body-cell-nombre_completo="props">
-            <q-td :props="props">
-              <div class="text-weight-bold">{{ props.row.nombre }} {{ props.row.apellidos }}</div>
-              <div class="text-grey-8">CI: {{ props.row.ci }}</div>
-            </q-td>
-          </template>
+            <q-btn
+              dense
+              flat
+              round
+              icon="edit"
+              class="action-btn-edit"
+              @click="openEditPacienteDialog(props.row)"
+              title="Editar Paciente"
+            />
+          </q-td>
+        </template>
+      </q-table>
+    </div>
 
-          <template v-slot:body-cell-estado="props">
-            <q-td :props="props">
-              <q-chip
-                :color="props.row.estado ? 'green' : 'red'"
-                text-color="white"
-                dense
-                class="text-weight-bold"
-                :label="props.row.estado ? 'Activo' : 'Inactivo'"
-              />
-            </q-td>
-          </template>
+    <q-dialog v-model="pacienteDialog" persistent @hide="resetForm">
+      <q-card class="dialog-card scrollable-dialog">
+        <q-form ref="pacienteFormRef" @submit.prevent="savePaciente">
+          <q-card-section class="dialog-header">
+            <div class="dialog-title">
+              {{ pacienteForm.id ? 'Editar Paciente' : 'Registrar Nuevo Paciente' }}
+            </div>
+          </q-card-section>
 
-          <template v-slot:body-cell-acciones="props">
-            <q-td :props="props" class="q-gutter-sm">
-              <q-btn dense color="secondary" icon="edit" @click="abrirDialogoEditar(props.row)" />
-              <q-btn
-                dense
-                :color="props.row.estado ? 'negative' : 'positive'"
-                :icon="props.row.estado ? 'toggle_off' : 'toggle_on'"
-                @click="cambiarEstado(props.row)"
-              />
-            </q-td>
-          </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
-
-    <q-dialog v-model="mostrarDialog" persistent>
-      <q-card style="width: 700px; max-width: 80vw">
-        <q-card-section class="bg-primary text-white">
-          <div class="text-h6">
-            {{ formulario.id ? 'Editar Paciente' : 'Añadir Nuevo Paciente' }}
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pt-md">
-          <q-form @submit="guardarPaciente" class="q-gutter-md">
-            <div class="row q-col-gutter-sm">
-              <div class="col-12 col-sm-4">
+          <q-card-section class="dialog-content">
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-6">
                 <q-input
-                  v-model="formulario.ci"
+                  v-model="pacienteForm.ci"
                   label="CI *"
                   outlined
                   dense
-                  :rules="[(val) => !!val || 'Campo requerido']"
+                  class="input-field"
+                  lazy-rules
+                  :rules="[
+                    (v) => !!v || 'El CI es requerido',
+                    (v) =>
+                      /^\d{7,10}(-\p{Lu})?$/.test(v) || 'CI inválido (7-10 dígitos, ej: 1234567-A)',
+                  ]"
                 />
               </div>
-              <div class="col-12 col-sm-4">
-                <q-input
-                  v-model="formulario.nombre"
-                  label="Nombre *"
-                  outlined
-                  dense
-                  :rules="[(val) => !!val || 'Campo requerido']"
-                />
-              </div>
-              <div class="col-12 col-sm-4">
-                <q-input
-                  v-model="formulario.apellidos"
-                  label="Apellidos *"
-                  outlined
-                  dense
-                  :rules="[(val) => !!val || 'Campo requerido']"
-                />
-              </div>
-              <div class="col-12 col-sm-4">
-                <q-input
-                  v-model="formulario.fecha_nacimiento"
-                  type="date"
-                  stack-label
-                  label="Fecha de Nacimiento *"
-                  outlined
-                  dense
-                />
-              </div>
-              <div class="col-12 col-sm-4">
+              <div class="col-12 col-sm-6">
                 <q-select
-                  v-model="formulario.genero"
-                  :options="['masculino', 'femenino', 'otro']"
+                  v-model="pacienteForm.genero"
+                  :options="formOptions.genero"
                   label="Género *"
                   outlined
                   dense
-                />
-              </div>
-              <div class="col-12 col-sm-4">
-                <q-input
-                  v-model="formulario.telefono"
-                  label="Teléfono *"
-                  type="number"
-                  outlined
-                  dense
-                />
-              </div>
-              <div class="col-12">
-                <q-input v-model="formulario.direccion" label="Dirección *" outlined dense />
-              </div>
-              <div class="col-12">
-                <q-toggle
-                  v-model="formulario.estado"
-                  label="Estado del paciente (Activo/Inactivo)"
+                  class="input-field"
+                  lazy-rules
+                  :rules="[(v) => !!v || 'El género es requerido']"
+                  emit-value
+                  map-options
                 />
               </div>
             </div>
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="pacienteForm.nombre"
+                  label="Nombre *"
+                  outlined
+                  dense
+                  class="input-field"
+                  lazy-rules
+                  :rules="[
+                    (v) => !!v || 'El nombre es requerido',
+                    (v) => /^[\p{L}\s]+$/u.test(v) || 'Solo se permiten letras y espacios',
+                  ]"
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="pacienteForm.apellidos"
+                  label="Apellidos *"
+                  outlined
+                  dense
+                  class="input-field"
+                  lazy-rules
+                  :rules="[
+                    (v) => !!v || 'Los apellidos son requeridos',
+                    (v) => /^[\p{L}\s]+$/u.test(v) || 'Solo se permiten letras y espacios',
+                  ]"
+                />
+              </div>
+            </div>
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="pacienteForm.telefono"
+                  label="Teléfono/Celular"
+                  outlined
+                  dense
+                  class="input-field"
+                  lazy-rules
+                  mask="########"
+                  :rules="[
+                    (v) => !v || /^[67]\d{7}$/.test(v) || 'Teléfono de Bolivia (empieza con 6 o 7)',
+                  ]"
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="pacienteForm.fecha_nacimiento"
+                  label="Fecha de Nacimiento *"
+                  type="date"
+                  stack-label
+                  outlined
+                  dense
+                  class="input-field"
+                  lazy-rules
+                  :rules="[(v) => !!v || 'La fecha es requerida']"
+                />
+              </div>
+            </div>
+            <div class="row q-col-gutter-md">
+              <div class="col-12">
+                <q-input
+                  v-model="pacienteForm.direccion"
+                  label="Dirección *"
+                  outlined
+                  dense
+                  class="input-field"
+                  lazy-rules
+                  type="textarea"
+                  :rules="[(v) => !!v || 'La dirección es requerida']"
+                />
+              </div>
+            </div>
+          </q-card-section>
 
-            <q-card-actions align="right">
-              <q-btn flat label="Cancelar" color="negative" v-close-popup />
-              <q-btn label="Guardar" type="submit" color="primary" />
-            </q-card-actions>
-          </q-form>
-        </q-card-section>
+          <q-card-actions align="right" class="dialog-actions">
+            <q-btn flat label="Cancelar" v-close-popup class="btn-cancelar" />
+            <q-btn
+              :loading="isSaving"
+              :label="pacienteForm.id ? 'Guardar Cambios' : 'Registrar'"
+              type="submit"
+              class="btn-guardar"
+            />
+          </q-card-actions>
+        </q-form>
       </q-card>
     </q-dialog>
-  </q-page>
+  </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
+import { ref, onMounted } from 'vue'
 import { api } from 'boot/axios'
+import { useQuasar } from 'quasar'
+import { useRouter } from 'vue-router' // ✅ Importar el router
 
 const $q = useQuasar()
+const router = useRouter() // ✅ Instanciar el router
 
-// --- Estado de la Tabla ---
+// --- Estado del Componente ---
 const pacientes = ref([])
-const isLoading = ref(false)
-const filtro = ref('')
-const columnas = [
-  {
-    name: 'nombre_completo',
-    label: 'Nombre Completo',
-    align: 'left',
-    field: (row) => `${row.nombre} ${row.apellidos}`,
-    sortable: true,
-  },
-  {
-    name: 'fecha_nacimiento',
-    label: 'Fecha de Nacimiento',
-    align: 'center',
-    field: 'fecha_nacimiento',
-    sortable: true,
-  },
-  { name: 'genero', label: 'Género', align: 'left', field: 'genero', sortable: true },
-  { name: 'telefono', label: 'Teléfono', align: 'left', field: 'telefono' },
-  { name: 'estado', label: 'Estado', align: 'center', field: 'estado', sortable: true },
-  { name: 'acciones', label: 'Acciones', align: 'right' },
-]
+const filter = ref('')
+const loadingTable = ref(false)
+const pacienteDialog = ref(false)
+const isSaving = ref(false)
+const pacienteFormRef = ref(null)
 
-// --- Estado del Formulario y Diálogo ---
-const mostrarDialog = ref(false)
-const formulario = reactive({
+// ✅ CORREGIDO: Opciones del formulario movidas a un 'ref' para evitar falsos positivos de ESLint.
+const formOptions = ref({
+  genero: [
+    { label: 'Masculino', value: 'masculino' },
+    { label: 'Femenino', value: 'femenino' },
+  ],
+})
+
+const initialFormState = {
   id: null,
   ci: '',
   nombre: '',
   apellidos: '',
-  fecha_nacimiento: '',
-  genero: 'masculino',
+  genero: null,
   telefono: '',
+  fecha_nacimiento: '',
   direccion: '',
   estado: true,
-})
+}
+const pacienteForm = ref({ ...initialFormState })
 
-// --- Funciones API ---
+const pacienteColumns = [
+  { name: 'ci', label: 'CI', field: 'ci', sortable: true, align: 'left' },
+  { name: 'nombre', label: 'Nombre', field: 'nombre', sortable: true, align: 'left' },
+  { name: 'apellidos', label: 'Apellidos', field: 'apellidos', sortable: true, align: 'left' },
+  {
+    name: 'genero',
+    label: 'Género',
+    field: 'genero',
+    align: 'center',
+    format: (val) => (val ? val.charAt(0).toUpperCase() + val.slice(1) : ''),
+  },
+  { name: 'telefono', label: 'Teléfono', field: 'telefono', align: 'center' },
+  { name: 'actions', label: 'Acciones', field: 'actions', align: 'center' },
+]
 
-const cargarPacientes = async () => {
-  isLoading.value = true
+// --- Lógica de API ---
+const fetchPacientes = async () => {
+  loadingTable.value = true
   try {
-    const { data } = await api.get('/pacientes')
-    pacientes.value = data
+    const response = await api.get('/pacientes') // Asegúrate que la ruta inicie con /api/
+    pacientes.value = response.data
   } catch (error) {
     console.error('Error al cargar pacientes:', error)
     $q.notify({ type: 'negative', message: 'No se pudieron cargar los pacientes.' })
   } finally {
-    isLoading.value = false
+    loadingTable.value = false
   }
 }
 
-const guardarPaciente = async () => {
+// ✅ AÑADIDO: La función que nos llevará al panel del paciente
+const irAPanel = (internacionId) => {
+  router.push({
+    name: 'PanelInternacion',
+    params: { id: internacionId },
+  })
+}
+
+// --- Lógica de Formularios y Diálogos ---
+const resetForm = () => {
+  pacienteForm.value = { ...initialFormState }
+  pacienteFormRef.value?.resetValidation()
+}
+
+const openAddPacienteDialog = () => {
+  resetForm()
+  pacienteDialog.value = true
+}
+
+const openEditPacienteDialog = (paciente) => {
+  resetForm()
+  pacienteForm.value = { ...paciente }
+  pacienteDialog.value = true
+}
+
+const savePaciente = async () => {
+  const isValid = await pacienteFormRef.value.validate()
+  if (!isValid) return
+
+  isSaving.value = true
+  const payload = { ...pacienteForm.value }
+
   try {
-    let payload = { ...formulario }
-    if (formulario.id) {
-      // Editar
-      await api.put(`/pacientes/${formulario.id}`, payload)
+    if (payload.id) {
+      await api.put(`/pacientes/${payload.id}`, payload)
       $q.notify({ type: 'positive', message: 'Paciente actualizado con éxito.' })
     } else {
-      // Crear
+      payload.estado = true
+      delete payload.id
       await api.post('/pacientes', payload)
-      $q.notify({ type: 'positive', message: 'Paciente creado con éxito.' })
+      $q.notify({ type: 'positive', message: 'Paciente registrado con éxito.' })
     }
-    mostrarDialog.value = false
-    await cargarPacientes()
+    pacienteDialog.value = false
+    await fetchPacientes()
   } catch (error) {
     console.error('Error al guardar paciente:', error)
-    $q.notify({
-      type: 'negative',
-      message: error.response?.data?.message || 'Error al guardar el paciente.',
-    })
+    const errorMessage = error.response?.data?.message || 'Ocurrió un error al guardar.'
+    if (error.response?.data?.errors) {
+      const validationErrors = Object.values(error.response.data.errors).flat().join('<br>')
+      $q.notify({
+        type: 'negative',
+        message: 'Error de validación:<br>' + validationErrors,
+        html: true,
+      })
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: errorMessage,
+      })
+    }
+  } finally {
+    isSaving.value = false
   }
 }
 
-const cambiarEstado = async (paciente) => {
-  $q.dialog({
-    title: 'Confirmar',
-    message: `¿Estás seguro de que quieres ${paciente.estado ? 'desactivar' : 'activar'} a este paciente?`,
-    cancel: true,
-    persistent: true,
-  }).onOk(async () => {
-    try {
-      await api.delete(`/pacientes/${paciente.id}`)
-      $q.notify({ type: 'info', message: 'Estado del paciente actualizado.' })
-      await cargarPacientes()
-    } catch (error) {
-      console.error('Error al cambiar estado:', error)
-      $q.notify({ type: 'negative', message: 'Error al cambiar el estado.' })
-    }
-  })
-}
-
-// --- Funciones del Diálogo ---
-
-const resetFormulario = () => {
-  Object.assign(formulario, {
-    id: null,
-    ci: '',
-    nombre: '',
-    apellidos: '',
-    fecha_nacimiento: '',
-    genero: 'masculino',
-    telefono: '',
-    direccion: '',
-    estado: true,
-  })
-}
-
-const abrirDialogoCrear = () => {
-  resetFormulario()
-  mostrarDialog.value = true
-}
-
-const abrirDialogoEditar = (paciente) => {
-  resetFormulario()
-  Object.assign(formulario, paciente)
-  mostrarDialog.value = true
-}
-
-// --- Hook de Ciclo de Vida ---
-onMounted(() => {
-  cargarPacientes()
-})
+onMounted(fetchPacientes)
 </script>
 
 <style scoped>
+/* Estos estilos son una base sólida que puedes reutilizar */
+.pacientes-container {
+  padding: 24px;
+  background: #f8fafc;
+}
+
 .header-section {
+  margin-bottom: 32px;
+}
+
+.titulo-principal {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.table-container-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 24px;
+}
+
+.table-header-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.table-search {
+  flex-grow: 1;
+  max-width: 450px;
+}
+
+.btn-agregar {
+  background: #14b8a6;
+  color: white;
+  font-weight: 600;
+}
+
+.styled-table :deep(th) {
+  font-weight: 600;
+  color: #475569;
+}
+
+.action-btn-edit {
+  color: #14b8a6;
+}
+
+/* Estilos para diálogos (modales) */
+.dialog-card {
+  width: 90vw;
+  max-width: 800px; /* Ancho ajustado para más campos */
+  border-radius: 16px;
+}
+
+.scrollable-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.scrollable-dialog .dialog-content {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.dialog-header {
+  background: #14b8a6;
+  color: white;
+  padding: 20px 24px;
+}
+
+.dialog-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  background-color: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-cancelar {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.btn-guardar {
+  background: #14b8a6;
+  color: white;
+  font-weight: 600;
+  padding: 8px 24px;
+}
+.action-btn-view {
+  color: #3b82f6; /* Un color azul para diferenciarlo del de editar */
+}
+.action-btn-edit {
+  color: #14b8a6;
 }
 </style>
