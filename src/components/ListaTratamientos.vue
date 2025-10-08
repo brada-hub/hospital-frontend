@@ -1,192 +1,236 @@
 <template>
-  <div class="text-subtitle1 text-weight-medium q-mt-lg">Tratamiento Activo</div>
+  <div class="q-mt-lg">
+    <div class="text-h6 text-weight-medium">Tratamiento Activo</div>
 
-  <div v-if="!tratamientosConSeguimiento.length" class="text-grey q-pa-sm">
-    Sin tratamiento activo prescrito.
-  </div>
+    <div v-if="!tratamientosConSeguimiento.length" class="text-grey-7 q-pa-md">
+      <q-icon name="healing" size="sm" class="q-mr-sm" />
+      <span>Sin tratamiento activo prescrito.</span>
+    </div>
 
-  <div
-    v-else
-    v-for="tratamiento in tratamientosConSeguimiento"
-    :key="tratamiento.id"
-    class="q-mt-sm"
-  >
-    <q-list bordered separator dense class="rounded-borders">
-      <q-item-label header>{{ tratamiento.tipo }}: Medicamentos</q-item-label>
+    <div
+      v-else
+      v-for="tratamiento in tratamientosConSeguimiento"
+      :key="tratamiento.id"
+      class="q-mt-sm"
+    >
+      <q-list bordered class="rounded-borders">
+        <q-item-label header class="text-subtitle1">
+          {{ tratamiento.tipo }}: Medicamentos
+        </q-item-label>
 
-      <q-item v-for="receta in tratamiento.recetas" :key="receta.id">
-        <q-item-section>
-          <q-inner-loading :showing="isLoading[tratamiento.id]">
-            <q-spinner-dots size="30px" color="primary" />
-          </q-inner-loading>
+        <q-item
+          v-for="receta in tratamiento.recetas"
+          :key="receta.id"
+          style="align-items: flex-start"
+        >
+          <q-item-section>
+            <!-- Loading spinner -->
+            <q-inner-loading :showing="isLoading[tratamiento.id]">
+              <q-spinner-dots size="30px" color="primary" />
+            </q-inner-loading>
 
-          <div v-if="!isLoading[tratamiento.id]">
-            <q-item-label
-              >{{ receta.medicamento.nombre }} ({{ receta.medicamento.presentacion }})</q-item-label
-            >
-            <q-item-label caption
-              >Dosis: {{ receta.dosis }} - c/{{ receta.frecuencia_horas }}h por
-              {{ receta.duracion_dias }} día(s).</q-item-label
-            >
-
-            <q-list dense class="q-ml-sm q-mt-xs q-mb-sm">
-              <q-item-label header class="text-caption text-weight-bold q-px-none"
-                >TOMAS HOY:</q-item-label
-              >
-
-              <q-item v-if="!receta.tomas_hoy || !receta.tomas_hoy.length"
-                ><q-item-section
-                  ><q-item-label caption>No hay tomas para hoy.</q-item-label></q-item-section
-                ></q-item
-              >
-
-              <q-item
-                v-else
-                v-for="toma in receta.tomas_hoy"
-                :key="toma.horaEsperada"
-                :class="{
-                  'bg-red-1': toma.status === 'Omitida',
-                  'bg-green-1': toma.status === 'Cumplida',
-                }"
-                class="q-py-sm"
-              >
-                <q-item-section avatar
-                  ><q-icon
-                    :name="getIconForStatus(toma.status)"
-                    :color="getColorForStatus(toma.status)"
-                    size="sm"
-                /></q-item-section>
-                <q-item-section>
-                  <q-item-label
-                    >{{ format(parseLaravelDate(toma.horaEsperada), 'HH:mm') }} -
-                    <span class="text-weight-bold">{{ toma.status }}</span></q-item-label
-                  >
-                  <q-item-label
-                    caption
-                    v-if="toma.status === 'Cumplida' && toma.datosAdministracion"
-                  >
-                    <span class="row items-center q-gutter-x-sm text-grey-8">
-                      <span
-                        ><q-icon name="person" size="xs" />
-                        {{ toma.datosAdministracion.user.nombre }}</span
-                      >
-                      <span
-                        ><q-icon name="schedule" size="xs" />
-                        {{
-                          format(parseLaravelDate(toma.datosAdministracion.fecha), 'HH:mm')
-                        }}h</span
-                      >
-                    </span>
+            <div v-if="!isLoading[tratamiento.id]">
+              <!-- Header de la receta -->
+              <div class="row items-center justify-between">
+                <div>
+                  <q-item-label class="text-body1 text-weight-bold">
+                    {{ receta.medicamento.nombre }}
                   </q-item-label>
-                </q-item-section>
-                <q-item-section
-                  side
-                  v-if="
-                    toma.status === 'Pendiente' &&
-                    esAdministrable(parseLaravelDate(toma.horaEsperada))
-                  "
-                >
-                  <q-btn
-                    unelevated
-                    size="sm"
-                    color="positive"
-                    label="Administrar"
-                    @click="abrirDialogoAdministrar(receta, toma)"
-                  />
-                </q-item-section>
-              </q-item>
-            </q-list>
+                  <q-item-label caption>
+                    Dosis: {{ receta.dosis }} - c/{{ receta.frecuencia_horas }}h
+                  </q-item-label>
+                </div>
 
-            <q-expansion-item
-              v-if="receta.historial_completo && receta.historial_completo.length > 0"
-              dense
-              icon="history"
-              label="Ver Historial Completo"
-              header-class="text-primary"
-              class="q-mt-sm"
-            >
-              <q-list dense separator>
-                <q-item v-for="hist in receta.historial_completo" :key="hist.horaEsperada">
-                  <q-item-section avatar>
-                    <q-icon
-                      :name="getIconForStatus(hist.status)"
-                      :color="getColorForStatus(hist.status)"
+                <!-- RF-07: Temporizador visual para próxima dosis -->
+                <div
+                  class="text-caption text-negative text-weight-bold q-px-sm bg-red-1 rounded-borders q-pa-xs"
+                >
+                  Próxima dosis en: {{ recetaTimers[receta.id] || 'Calculando...' }}
+                </div>
+              </div>
+
+              <!-- RF-06: Cronograma visual del día -->
+              <div class="q-mt-md">
+                <div class="text-subtitle2 q-mb-sm">Cronograma de Hoy:</div>
+
+                <q-timeline color="primary" layout="dense">
+                  <!-- Sin tomas programadas -->
+                  <q-timeline-entry
+                    v-if="!receta.tomas_hoy || !receta.tomas_hoy.length"
+                    title="Sin tomas programadas para hoy"
+                    icon="event_busy"
+                    color="grey"
+                  />
+
+                  <!-- Tomas del día -->
+                  <q-timeline-entry
+                    v-else
+                    v-for="toma in receta.tomas_hoy"
+                    :key="toma.id || toma.horaReal"
+                    :title="toma.status"
+                    :subtitle="formatHora(toma.horaReal)"
+                    :color="getColorForStatus(toma.status)"
+                    :icon="getIconForStatus(toma.status)"
+                  >
+                    <!-- RF-03: Información de administración -->
+                    <div v-if="toma.datosAdministracion">
+                      <div class="text-caption row items-center no-wrap">
+                        <q-icon name="person" size="xs" class="q-mr-xs" />
+                        <span>
+                          Por: {{ toma.datosAdministracion.user.nombre }}
+                          {{ toma.datosAdministracion.user.apellidos }}
+                        </span>
+                      </div>
+                      <div
+                        v-if="toma.datosAdministracion.observaciones"
+                        class="text-caption text-grey-7 q-mt-xs"
+                      >
+                        Obs: {{ toma.datosAdministracion.observaciones }}
+                      </div>
+                    </div>
+
+                    <!-- RF-02: Botón de administración (solo visible según RF-07) -->
+                    <q-btn
+                      v-if="esBotonVisible(toma)"
+                      unelevated
+                      size="sm"
+                      :color="toma.status === '¡ATRASADA!' ? 'deep-orange' : 'positive'"
+                      :label="
+                        toma.status === '¡ATRASADA!' ? 'Administrar (Atrasada)' : 'Administrar'
+                      "
+                      @click="abrirDialogoAdministrar(receta, toma)"
+                      class="q-mt-sm"
                     />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label caption>
-                      {{ format(parseLaravelDate(hist.horaEsperada), 'dd/MM/yy HH:mm') }} -
-                      {{ hist.status }}
-                    </q-item-label>
-                    <q-item-label
-                      caption
-                      v-if="hist.status === 'Cumplida' && hist.datosAdministracion"
-                    >
-                      Por: {{ hist.datosAdministracion.user.nombre }} a las
-                      {{ format(parseLaravelDate(hist.datosAdministracion.fecha), 'HH:mm') }}h
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </q-expansion-item>
-          </div>
-        </q-item-section>
-        <q-item-section side>
-          <div class="text-caption text-negative text-weight-bold q-px-sm">
-            Sig. Admin. en: {{ recetaTimers[receta.id] || '...' }}
-          </div>
-        </q-item-section>
-      </q-item>
-    </q-list>
+                  </q-timeline-entry>
+                </q-timeline>
+              </div>
+            </div>
+          </q-item-section>
+        </q-item>
+      </q-list>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { api } from 'boot/axios'
-import { useQuasar, Notify, Dialog } from 'quasar'
+import { useQuasar } from 'quasar'
 import {
   format,
   addHours,
-  addMinutes,
   subMinutes,
   isPast,
   differenceInMilliseconds,
   isWithinInterval,
+  addDays,
 } from 'date-fns'
 
-const $q = useQuasar()
-const props = defineProps({ internacion: Object })
+const props = defineProps({
+  internacion: {
+    type: Object,
+    required: true,
+  },
+})
+
 const emit = defineEmits(['recargar-pacientes'])
 
+const $q = useQuasar()
 const tratamientosConSeguimiento = ref([])
 const recetaTimers = ref({})
 const intervalRefs = ref({})
 const isLoading = ref({})
-const omissionTimers = ref({}) // ✅ Para los timers de omisión
 
+/**
+ * Convierte string de Laravel a objeto Date
+ */
 function parseLaravelDate(dateTimeString) {
   if (!dateTimeString) return null
-  const date = new Date(dateTimeString.replace(' ', 'T'))
+  const date = new Date(dateTimeString.toString().replace(' ', 'T'))
   return isNaN(date) ? null : date
 }
 
+/**
+ * Formatea hora para mostrar (HH:mm)
+ */
+function formatHora(dateTimeString) {
+  const fecha = parseLaravelDate(dateTimeString)
+  return fecha ? format(fecha, 'HH:mm') : '--:--'
+}
+
+/**
+ * RF-07: Verifica si una dosis es administrable (ventana de tiempo)
+ * Ventana: 30 minutos antes hasta 2 horas después
+ */
 const esAdministrable = (hora) => {
+  if (!hora) return false
   const ahora = new Date()
-  const ventana = { start: subMinutes(hora, 30), end: addHours(hora, 1) }
+  const ventana = {
+    start: subMinutes(hora, 30),
+    end: addHours(hora, 2),
+  }
   return isWithinInterval(ahora, ventana)
 }
-const getIconForStatus = (status) =>
-  ({ Cumplida: 'check_circle', Omitida: 'cancel', Pendiente: 'schedule' })[status] || 'schedule'
-const getColorForStatus = (status) =>
-  ({ Cumplida: 'positive', Omitida: 'negative', Pendiente: 'grey-8' })[status] || 'grey-8'
 
+/**
+ * RF-06, RF-07: Determina si el botón "Administrar" debe mostrarse
+ */
+const esBotonVisible = (toma) => {
+  if (!toma) return false
+  const hora = parseLaravelDate(toma.horaReal)
+  if (!hora) return false
+
+  // 🔥 SI NO TIENE ID → Es la PRIMERA DOSIS, SIEMPRE mostrar botón
+  if (!toma.id) return true
+
+  // Si está pendiente y dentro de la ventana (30m antes / 2h después)
+  if (toma.status === 'Pendiente' && esAdministrable(hora)) return true
+
+  // RF-06: Si está atrasada, mostrar botón para permitir registro tardío
+  if (toma.status === '¡ATRASADA!') return true
+
+  // No mostrar botón para dosis ya cumplidas
+  return false
+}
+
+/**
+ * RF-06: Iconos según estado
+ */
+const getIconForStatus = (status) => {
+  const icons = {
+    Cumplida: 'check_circle',
+    'Cumplida (Retrasada)': 'check_circle',
+    Omitida: 'cancel',
+    Pendiente: 'schedule',
+    '¡ATRASADA!': 'warning',
+  }
+  return icons[status] || 'schedule'
+}
+
+/**
+ * RF-06: Colores según estado
+ */
+const getColorForStatus = (status) => {
+  const colors = {
+    Cumplida: 'positive',
+    'Cumplida (Retrasada)': 'deep-orange',
+    Omitida: 'negative',
+    Pendiente: 'grey-8',
+    '¡ATRASADA!': 'deep-orange',
+  }
+  return colors[status] || 'grey-8'
+}
+
+/**
+ * RF-06, RF-07: Cargar seguimiento de tratamientos activos
+ */
 const fetchSeguimiento = async () => {
-  // Limpia todos los timers antes de empezar para evitar fugas de memoria
+  // Limpiar intervalos previos
   Object.values(intervalRefs.value).forEach(clearInterval)
-  Object.values(omissionTimers.value).forEach(clearTimeout)
+  intervalRefs.value = {}
 
   const tratamientosActivos = props.internacion.tratamientos?.filter((t) => t.estado === 0) || []
+
   if (!tratamientosActivos.length) {
     tratamientosConSeguimiento.value = []
     return
@@ -195,15 +239,23 @@ const fetchSeguimiento = async () => {
   const tratamientosProcesados = await Promise.all(
     tratamientosActivos.map(async (tratamiento) => {
       isLoading.value[tratamiento.id] = true
+
       try {
         const response = await api.get(`/seguimiento/tratamiento/${tratamiento.id}`)
+
+        // RF-07: Iniciar temporizador para cada receta
         response.data.recetas.forEach((receta) => {
-          iniciarTemporizadorReceta(receta)
-          iniciarOmissionTimer(receta) // ✅ Inicia el timer de omisión para cada receta
+          iniciarTemporizadorReceta(receta, tratamiento)
         })
+
         return response.data
       } catch (error) {
         console.error(`Error al cargar seguimiento para tratamiento ${tratamiento.id}:`, error)
+        $q.notify({
+          color: 'negative',
+          message: `Error al cargar tratamiento ${tratamiento.tipo}`,
+          icon: 'error',
+        })
         return tratamiento
       } finally {
         isLoading.value[tratamiento.id] = false
@@ -214,97 +266,152 @@ const fetchSeguimiento = async () => {
   tratamientosConSeguimiento.value = tratamientosProcesados
 }
 
-// ✅ NUEVA FUNCIÓN PARA EL TIMER DE OMISIÓN
-const iniciarOmissionTimer = (receta) => {
-  if (omissionTimers.value[receta.id]) {
-    clearTimeout(omissionTimers.value[receta.id])
+/**
+ * RF-07: Iniciar temporizador de cuenta regresiva para próxima dosis
+ */
+const iniciarTemporizadorReceta = (receta, tratamiento) => {
+  // Limpiar intervalo previo si existe
+  if (intervalRefs.value[receta.id]) {
+    clearInterval(intervalRefs.value[receta.id])
   }
 
-  const tomaPendiente = receta.tomas_hoy?.find((t) => t.status === 'Pendiente')
+  const inicioTratamiento = parseLaravelDate(tratamiento.fecha_inicio)
+  const finTratamiento = addDays(inicioTratamiento, receta.duracion_dias)
 
-  if (tomaPendiente && isPast(parseLaravelDate(tomaPendiente.horaEsperada))) {
-    const horaToma = parseLaravelDate(tomaPendiente.horaEsperada)
-    // La tolerancia es de 15 minutos DESPUÉS de la hora programada
-    const horaLimite = addMinutes(horaToma, 15)
-    const ahora = new Date()
-
-    if (isPast(horaLimite)) return // Si ya pasó el tiempo, no hacemos nada, el backend lo marcará en la próxima carga
-
-    const msHastaLimite = differenceInMilliseconds(horaLimite, ahora)
-
-    omissionTimers.value[receta.id] = setTimeout(() => {
-      console.log(
-        `Tolerancia para receta ${receta.id} expiró. Recargando para marcar como omitida.`,
-      )
-      emit('recargar-pacientes') // Forzamos la recarga de datos
-    }, msHastaLimite)
-  }
-}
-
-watch(() => props.internacion, fetchSeguimiento, { deep: true, immediate: true })
-
-const iniciarTemporizadorReceta = (receta) => {
-  if (intervalRefs.value[receta.id]) clearInterval(intervalRefs.value[receta.id])
-  const tomasRealizadas = receta.administras || []
-  if (tomasRealizadas.length === 0) {
-    recetaTimers.value[receta.id] = '1ra Dosis Pendiente'
+  // Verificar si el tratamiento ya finalizó
+  if (isPast(finTratamiento)) {
+    recetaTimers.value[receta.id] = 'Finalizado'
     return
   }
-  const frecuenciaHoras = receta.frecuencia_horas
-  const ultimaAdminFecha = parseLaravelDate(tomasRealizadas[0].fecha)
-  if (!ultimaAdminFecha || !frecuenciaHoras) {
-    recetaTimers.value[receta.id] = 'Error Fecha'
+
+  const tomasHoy = receta.tomas_hoy || []
+  const proximaTomaPendiente = tomasHoy.find(
+    (t) => t.status === 'Pendiente' || t.status === '¡ATRASADA!',
+  )
+
+  if (!proximaTomaPendiente) {
+    recetaTimers.value[receta.id] = 'Completo por hoy'
     return
   }
-  let proximaAdmin = addHours(ultimaAdminFecha, frecuenciaHoras)
-  while (isPast(proximaAdmin)) {
-    proximaAdmin = addHours(proximaAdmin, frecuenciaHoras)
-  }
+
+  const proximaAdmin = parseLaravelDate(proximaTomaPendiente.horaReal)
+
   const updateTimer = () => {
     const remainingMs = differenceInMilliseconds(proximaAdmin, new Date())
-    if (remainingMs <= 0) {
+
+    // RF-06: Si pasaron 30 minutos desde la hora programada
+    if (remainingMs <= -1800000) {
       clearInterval(intervalRefs.value[receta.id])
-      recetaTimers.value[receta.id] = '¡Ahora!'
-      fetchSeguimiento() // Recarga para mostrar el nuevo estado 'Pendiente'
+      recetaTimers.value[receta.id] = 'Atrasada'
       return
     }
+
+    if (remainingMs <= 0) {
+      recetaTimers.value[receta.id] = '¡Ahora!'
+      return
+    }
+
     const totalSeconds = Math.floor(remainingMs / 1000)
     const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
     const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')
     const seconds = String(totalSeconds % 60).padStart(2, '0')
     recetaTimers.value[receta.id] = `${hours}:${minutes}:${seconds}`
   }
+
   updateTimer()
   intervalRefs.value[receta.id] = setInterval(updateTimer, 1000)
 }
 
-onBeforeUnmount(() => {
-  Object.values(intervalRefs.value).forEach(clearInterval)
-  Object.values(omissionTimers.value).forEach(clearTimeout) // Limpiar ambos tipos de timers
-})
-
+/**
+ * RF-02, RF-03, RF-04: Abrir diálogo para administrar medicamento
+ */
 function abrirDialogoAdministrar(receta, toma) {
-  Dialog.create({
+  $q.dialog({
     title: `Administrar: ${receta.medicamento.nombre}`,
-    message: `Confirmar administración para la toma de las ${format(parseLaravelDate(toma.horaEsperada), 'HH:mm')}.`,
-    prompt: { model: '', type: 'textarea', label: 'Observaciones (opcional)' },
-    cancel: true,
+    message: `Confirmar administración para la toma de las ${formatHora(toma.horaReal)}.`,
+    prompt: {
+      model: '',
+      type: 'textarea',
+      label: 'Observaciones (opcional)',
+      outlined: true,
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey-7',
+      flat: true,
+    },
+    ok: {
+      label: 'Confirmar',
+      color: 'positive',
+    },
     persistent: true,
   }).onOk(async (observaciones) => {
-    $q.loading.show({ message: 'Registrando...' })
+    $q.loading.show({ message: 'Registrando administración...' })
+
     try {
-      await api.post('/administraciones', {
-        receta_id: receta.id,
-        observaciones: observaciones,
+      // RF-02, RF-03: Enviar datos al backend
+      const payload = toma.id
+        ? {
+            // Actualizar dosis existente en BD
+            administracion_id: toma.id,
+            observaciones: observaciones || undefined,
+          }
+        : {
+            // Primera administración (raro, pero posible si no hay cronograma)
+            receta_id: receta.id,
+            hora_programada: toma.horaReal,
+            observaciones: observaciones || undefined,
+          }
+
+      await api.post('/administraciones', payload)
+
+      $q.notify({
+        color: 'positive',
+        message: '✅ Medicamento administrado correctamente',
+        icon: 'check_circle',
+        position: 'top',
       })
-      Notify.create({ color: 'positive', message: 'Medicamento administrado.' })
+
+      // RF-07: Recargar datos
       emit('recargar-pacientes')
     } catch (error) {
-      console.error('Error al registrar:', error)
-      Notify.create({ color: 'negative', message: 'Error al registrar.' })
+      const message = error.response?.data?.message || 'Error al registrar administración'
+
+      $q.notify({
+        color: 'negative',
+        message: `❌ ${message}`,
+        icon: 'error',
+        position: 'top',
+      })
+
+      console.error('Error al administrar:', error)
     } finally {
       $q.loading.hide()
     }
   })
 }
+
+// Watcher para recargar seguimiento cuando cambie la internación
+watch(
+  () => props.internacion,
+  () => {
+    fetchSeguimiento()
+  },
+  { deep: true, immediate: true },
+)
+
+// Limpiar intervalos al desmontar componente
+onBeforeUnmount(() => {
+  Object.values(intervalRefs.value).forEach(clearInterval)
+})
 </script>
+
+<style scoped>
+.rounded-borders {
+  border-radius: 8px;
+}
+
+.bg-red-1 {
+  background-color: #ffebee;
+}
+</style>
