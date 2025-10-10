@@ -102,10 +102,21 @@
                   <q-input
                     dense
                     outlined
-                    v-model="receta.dosis"
+                    v-model.number="receta.dosis_valor"
                     label="Dosis *"
-                    :rules="[(val) => !!val || 'Requerido']"
-                  />
+                    type="number"
+                    :rules="[(val) => val > 0 || 'Debe ser > 0']"
+                  >
+                    <template v-slot:append>
+                      <q-select
+                        dense
+                        borderless
+                        v-model="receta.dosis_unidad"
+                        :options="unidadesDosis"
+                        class="unidad-select"
+                      />
+                    </template>
+                  </q-input>
                 </div>
                 <div class="col-12 col-md-6 col-lg-3">
                   <q-select
@@ -188,6 +199,18 @@ export default defineComponent({
       'Oftálmica',
     ])
 
+    // ✅ Lista de unidades para el selector
+    const unidadesDosis = ref([
+      'mg',
+      'g',
+      'ml',
+      'mcg',
+      'UI',
+      'gotas',
+      'comprimido(s)',
+      'cápsula(s)',
+    ])
+
     const tratamientoForm = reactive({
       internacion_id: props.internacionId,
       tipo: '',
@@ -201,9 +224,22 @@ export default defineComponent({
 
     watch(
       () => props.tratamientoParaEditar,
-      (tratamiento) => {
-        if (tratamiento) {
-          Object.assign(tratamientoForm, tratamiento)
+      (nuevoTratamiento) => {
+        if (nuevoTratamiento) {
+          Object.assign(tratamientoForm, nuevoTratamiento)
+
+          // ✅ Lógica para PARSEAR la dósis al editar
+          // Separa "12 mg" en valor=12 y unidad='mg'
+          const recetasParseadas = (nuevoTratamiento.recetas || []).map((receta) => {
+            const [valor, ...unidadParts] = (receta.dosis || '').split(' ')
+            const unidad = unidadParts.join(' ') || 'mg'
+            return {
+              ...receta,
+              dosis_valor: parseFloat(valor) || null,
+              dosis_unidad: unidadesDosis.value.includes(unidad) ? unidad : 'mg',
+            }
+          })
+          tratamientoForm.recetas = JSON.parse(JSON.stringify(recetasParseadas))
         } else {
           Object.assign(tratamientoForm, {
             internacion_id: props.internacionId,
@@ -217,7 +253,7 @@ export default defineComponent({
           })
         }
       },
-      { immediate: true, deep: true },
+      { immediate: true },
     )
 
     const opcionesFiltradas = ref([])
@@ -244,9 +280,11 @@ export default defineComponent({
         $q.notify({ color: 'warning', message: 'Este medicamento ya fue añadido.' })
         return
       }
+      // ✅ Se inicializa la nueva receta con los campos para valor y unidad
       tratamientoForm.recetas.push({
         medicamento_id: medicamentoSeleccionado.value,
-        dosis: '',
+        dosis_valor: null,
+        dosis_unidad: 'mg',
         via_administracion: 'Oral',
         frecuencia_horas: 8,
         duracion_dias: 1,
@@ -267,19 +305,36 @@ export default defineComponent({
     expose({
       async validarYObtenerDatos() {
         const esValido = await formRef.value.validate()
+
         if (!tratamientoForm.recetas.length) {
           $q.notify({ color: 'negative', message: 'Debe prescribir al menos un medicamento.' })
           return { esValido: false }
         }
+
         if (esValido) {
-          const duraciones = tratamientoForm.recetas.map((r) => r.duracion_dias || 0)
+          const datosParaEnviar = JSON.parse(JSON.stringify(tratamientoForm))
+
+          // ✅ Lógica para UNIR valor y unidad antes de enviar al backend
+          // Convierte valor=12 y unidad='mg' en dosis="12 mg"
+          datosParaEnviar.recetas.forEach((receta) => {
+            if (receta.dosis_valor && receta.dosis_unidad) {
+              receta.dosis = `${receta.dosis_valor} ${receta.dosis_unidad}`
+            }
+            delete receta.dosis_valor
+            delete receta.dosis_unidad
+          })
+
+          const duraciones = datosParaEnviar.recetas.map((r) => r.duracion_dias || 0)
           const maxDuracion = Math.max(...duraciones)
-          tratamientoForm.fecha_fin = format(
-            addDays(new Date(tratamientoForm.fecha_inicio), maxDuracion),
+          datosParaEnviar.fecha_fin = format(
+            addDays(new Date(datosParaEnviar.fecha_inicio), maxDuracion),
             'yyyy-MM-dd HH:mm:ss',
           )
+
+          return { datos: datosParaEnviar, esValido }
         }
-        return { datos: tratamientoForm, esValido }
+
+        return { esValido: false }
       },
     })
 
@@ -293,6 +348,7 @@ export default defineComponent({
       agregarReceta,
       quitarReceta,
       getMedicamentoNombre,
+      unidadesDosis, // Exponer la lista de unidades al template
     }
   },
 })
@@ -309,5 +365,12 @@ export default defineComponent({
   gap: 8px;
   font-weight: 500;
   color: #555;
+}
+/* Estilo para que el selector de unidad se vea bien */
+.unidad-select {
+  padding-left: 0;
+  background-color: #f7f7f7;
+  border-left: 1px solid #ccc;
+  min-width: 85px;
 }
 </style>

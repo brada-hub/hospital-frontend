@@ -1,104 +1,120 @@
 <template>
-  <div>
-    <div class="row q-col-gutter-xl q-mb-lg">
-      <div class="col-12 col-md-4">
-        <div class="text-subtitle1 text-weight-medium">Datos de Ingreso</div>
-        <div
-          v-if="internacion.datos_antropometricos"
-          class="row q-col-gutter-md q-mt-xs text-center bg-grey-1 q-pa-sm rounded-borders"
-        >
-          <div class="col-4">
-            <div class="text-caption text-grey-7">Altura</div>
-            <div class="text-body1 text-weight-bold">
+  <div class="dashboard-paciente">
+    <div class="datos-acciones-container">
+      <div class="datos-ingreso-card">
+        <div class="card-header">
+          <q-icon name="straighten" size="24px" />
+          <span>Datos de Ingreso</span>
+        </div>
+        <div v-if="internacion.datos_antropometricos" class="datos-grid">
+          <div class="dato-item">
+            <q-icon name="height" size="32px" class="dato-icon" />
+            <div class="dato-label">Altura</div>
+            <div class="dato-value">
               {{ internacion.datos_antropometricos.altura || 'N/A' }}
             </div>
           </div>
-          <div class="col-4">
-            <div class="text-caption text-grey-7">Peso</div>
-            <div class="text-body1 text-weight-bold">
+          <div class="dato-item">
+            <q-icon name="monitor_weight" size="32px" class="dato-icon" />
+            <div class="dato-label">Peso</div>
+            <div class="dato-value">
               {{ internacion.datos_antropometricos.peso || 'N/A' }}
             </div>
           </div>
-          <div class="col-4">
-            <div class="text-caption text-grey-7">IMC</div>
-            <div v-if="internacion.datos_antropometricos.imc" class="text-body1 text-weight-bold">
+          <div class="dato-item">
+            <q-icon name="calculate" size="32px" class="dato-icon" />
+            <div class="dato-label">IMC</div>
+            <div v-if="internacion.datos_antropometricos.imc" class="dato-value">
               {{ internacion.datos_antropometricos.imc }}
             </div>
-            <div v-else class="text-body1 text-weight-bold">N/A</div>
+            <div v-else class="dato-value">N/A</div>
           </div>
         </div>
-        <div v-else class="text-grey q-pa-sm">Datos antropométricos no disponibles.</div>
+        <div v-else class="no-datos">
+          <q-icon name="info" size="24px" />
+          <span>Datos antropométricos no disponibles</span>
+        </div>
       </div>
-      <div class="col-12 col-md-8">
-        <div class="text-subtitle1 text-weight-medium q-mb-sm">Acciones de Enfermería</div>
-        <q-btn
-          unelevated
-          color="primary"
-          label="Registrar Signos Vitales"
-          icon="monitor_heart"
-          @click="abrirDialogoRegistrarSignos(internacion)"
-        />
-        <q-btn
-          unelevated
-          color="secondary"
-          label="Registrar Novedad"
-          icon="add_box"
-          class="q-ml-md"
-          @click="abrirDialogoCrearCuidadoRapido(internacion)"
-        />
+
+      <div class="acciones-card">
+        <div class="card-header">
+          <q-icon name="medical_services" size="24px" />
+          <span>Acciones de Enfermería</span>
+        </div>
+        <div class="acciones-buttons">
+          <q-btn
+            unelevated
+            class="action-btn primary-btn"
+            label="Registrar Signos Vitales"
+            icon="monitor_heart"
+            @click="abrirDialogoRegistrarSignos(internacion)"
+          />
+          <q-btn
+            unelevated
+            class="action-btn secondary-btn"
+            label="Registrar Novedad"
+            icon="add_box"
+            @click="abrirDialogoCrearCuidadoRapido(internacion)"
+          />
+        </div>
       </div>
     </div>
 
-    <q-separator class="q-my-lg" />
+    <q-separator class="section-separator" />
 
-    <div class="text-h6 text-weight-medium">Monitor de Signos Vitales</div>
-    <div
-      v-if="!internacion.controls || !internacion.controls.length"
-      class="text-center text-grey-7 q-pa-xl"
-    >
-      <q-icon name="analytics" size="xl" />
-      <p class="q-mt-md">Aún no se han registrado signos vitales para este paciente.</p>
+    <div v-if="!haySignosVitales" class="empty-state">
+      <q-icon name="analytics" size="64px" />
+      <p>Aún no se han registrado signos vitales para este paciente.</p>
     </div>
-    <SignosVitalesDashboard v-else :controls="internacion.controls" class="q-mt-md" />
 
-    <q-separator class="q-my-lg" />
+    <SignosVitalesDashboard v-else :controls="internacion.controles" :internacion="internacion" />
+
+    <q-separator class="section-separator" />
 
     <ListaTratamientos
       :internacion="internacion"
+      class="component-section"
       @recargar-pacientes="emit('recargar-pacientes')"
     />
     <PlanCuidados
       :plan="internacion.plan_de_cuidados"
+      class="component-section"
       @recargar-pacientes="emit('recargar-pacientes')"
     />
-    <EvolucionEnfermeria :evoluciones="internacion.evolucion_enfermeria" />
+    <EvolucionEnfermeria
+      :evoluciones="internacion.evolucion_enfermeria"
+      class="component-section"
+    />
 
     <q-dialog v-model="dialogoSignosVisible">
-      <q-card style="width: 700px; max-width: 80vw">
-        <q-card-section>
-          <div class="text-h6">Registrar Signos Vitales</div>
-          <div v-if="internacionSeleccionada" class="text-subtitle2 text-grey">
+      <q-card class="signos-dialog">
+        <q-card-section class="dialog-header">
+          <div class="dialog-title">
+            <q-icon name="monitor_heart" size="28px" />
+            <span>Registrar Signos Vitales</span>
+          </div>
+          <div v-if="internacionSeleccionada" class="dialog-subtitle">
             Paciente: {{ internacionSeleccionada.paciente.nombre }}
             {{ internacionSeleccionada.paciente.apellidos }}
           </div>
         </q-card-section>
-        <q-card-section class="q-pt-none">
+        <q-card-section class="dialog-body">
           <FormularioSignosVitales ref="formSignosRef" tipo="rutinario" />
           <q-input
             v-model="observacionesSignos"
             type="textarea"
             label="Observaciones generales (opcional)"
             outlined
-            class="q-mt-md"
+            class="q-mt-md observaciones-input"
             autogrow
           />
         </q-card-section>
-        <q-card-actions align="right" class="bg-grey-2 q-pa-md">
-          <q-btn flat label="Cancelar" color="primary" v-close-popup />
+        <q-card-actions class="dialog-actions">
+          <q-btn flat label="Cancelar" class="cancel-btn" v-close-popup />
           <q-btn
             unelevated
             label="Guardar Registro"
-            color="primary"
+            class="save-btn"
             @click="handleGuardarSignosVitales"
             :loading="isSavingSignos"
           />
@@ -109,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits } from 'vue'
+import { ref, defineProps, defineEmits, computed } from 'vue'
 import { api } from 'boot/axios'
 import { Notify, Dialog } from 'quasar'
 import FormularioSignosVitales from 'src/components/FormularioSignosVitales.vue'
@@ -119,7 +135,7 @@ import EvolucionEnfermeria from 'src/components/EvolucionEnfermeria.vue'
 import { useUserStore } from 'stores/user'
 import SignosVitalesDashboard from 'src/components/SignosVitalesDashboard.vue'
 
-defineProps({
+const props = defineProps({
   internacion: {
     type: Object,
     required: true,
@@ -134,6 +150,16 @@ const formSignosRef = ref(null)
 const observacionesSignos = ref('')
 const userStore = useUserStore()
 const isSavingSignos = ref(false)
+
+const haySignosVitales = computed(() => {
+  if (!Array.isArray(props.internacion?.controles)) {
+    return false
+  }
+
+  return props.internacion.controles.some(
+    (c) => c && Array.isArray(c.valores) && c.valores.length > 0,
+  )
+})
 
 function abrirDialogoRegistrarSignos(internacion) {
   internacionSeleccionada.value = internacion
@@ -214,3 +240,294 @@ function abrirDialogoCrearCuidadoRapido(internacion) {
   })
 }
 </script>
+
+<style scoped>
+.dashboard-paciente {
+  padding: 20px;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  min-height: 100vh;
+}
+
+.component-section,
+.datos-acciones-container,
+.empty-state {
+  margin-bottom: 40px;
+}
+
+.datos-acciones-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.datos-ingreso-card,
+.acciones-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.datos-ingreso-card:hover,
+.acciones-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  color: white;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.datos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 24px;
+}
+
+.dato-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.dato-item:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
+
+.dato-icon {
+  color: #10b981;
+}
+
+.dato-label {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.dato-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.no-datos {
+  padding: 32px;
+  text-align: center;
+  color: #9ca3af;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.acciones-buttons {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.action-btn {
+  width: 100%;
+  height: 56px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
+}
+
+.secondary-btn {
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  color: white;
+}
+
+.secondary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(13, 148, 136, 0.3);
+}
+
+.section-separator {
+  margin: 40px 0;
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  height: 2px;
+  border: none;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 64px 32px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  color: #9ca3af;
+}
+
+.empty-state p {
+  margin-top: 16px;
+  font-size: 16px;
+}
+
+.signos-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+  min-width: 600px;
+}
+
+.dialog-header {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 24px;
+}
+
+.dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.dialog-subtitle {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-left: 40px;
+}
+
+.dialog-body {
+  padding: 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.dialog-actions {
+  background: #f9fafb;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-btn {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.save-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  font-weight: 600;
+  padding: 0 24px;
+  border-radius: 8px;
+}
+
+.save-btn:hover {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+@media (max-width: 1024px) {
+  .datos-acciones-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-paciente {
+    padding: 16px;
+  }
+  .datos-grid {
+    gap: 12px;
+    padding: 16px;
+  }
+  .dato-item {
+    padding: 12px;
+  }
+  .dato-value {
+    font-size: 18px;
+  }
+  .acciones-buttons {
+    padding: 16px;
+  }
+  .action-btn {
+    height: 48px;
+    font-size: 14px;
+  }
+  .signos-dialog {
+    min-width: 90vw;
+  }
+}
+
+@media (max-width: 480px) {
+  .datos-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .dato-item {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 16px;
+  }
+  .dato-icon {
+    order: 1;
+  }
+  .dato-label {
+    order: 2;
+    flex: 1;
+    text-align: left;
+    margin-left: 12px;
+  }
+  .dato-value {
+    order: 3;
+  }
+  .acciones-buttons {
+    gap: 12px;
+  }
+  .action-btn {
+    font-size: 13px;
+  }
+  .dialog-title {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 360px) {
+  .card-header {
+    font-size: 16px;
+    padding: 16px;
+  }
+  .dato-value {
+    font-size: 16px;
+  }
+  .action-btn {
+    height: 44px;
+    font-size: 12px;
+  }
+}
+</style>

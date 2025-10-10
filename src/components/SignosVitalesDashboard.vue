@@ -1,33 +1,53 @@
 <template>
-  <div>
-    <div class="row q-col-gutter-md q-mb-lg">
-      <div v-for="card in statCards" :key="card.nombre" class="col-12 col-sm-6 col-md-4 col-lg-2">
-        <q-card flat bordered class="stat-card">
-          <q-card-section>
-            <div class="stat-label">{{ card.nombre }}</div>
-            <div class="stat-value">{{ card.valor }}</div>
-            <div class="stat-unidad">{{ card.unidad }}</div>
-          </q-card-section>
-        </q-card>
+  <div class="signos-vitales-container">
+    <div class="section-header">
+      <q-icon name="analytics" size="28px" />
+      <span>Monitor de Signos Vitales</span>
+    </div>
+
+    <div class="stats-grid">
+      <div
+        v-for="(card, index) in statCards"
+        :key="card.nombre"
+        class="stat-card"
+        :style="{ animationDelay: `${index * 0.1}s` }"
+      >
+        <div class="stat-card-header">
+          <q-icon :name="getIconForStat(card.nombre)" size="32px" class="stat-icon" />
+        </div>
+        <div class="stat-card-body">
+          <div class="stat-label">{{ card.nombre }}</div>
+          <div class="stat-value">{{ card.valor }}</div>
+          <div class="stat-unidad">{{ card.unidad }}</div>
+          <div class="stat-status" :class="getStatusClass(card.nombre, card.valor)">
+            {{ getStatusText(card.nombre, card.valor) }}
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="row q-col-gutter-md">
-      <div v-for="chart in chartData" :key="chart.signoNombre" class="col-12 col-md-4">
-        <q-card flat bordered>
-          <q-card-section>
-            <div class="text-subtitle1 text-weight-medium">{{ chart.signoNombre }}</div>
-          </q-card-section>
-          <q-separator />
-          <q-card-section>
-            <vue-apex-charts
-              type="line"
-              height="250"
-              :options="getChartOptions(chart.signoNombre, chart.unidad)"
-              :series="chart.series"
-            ></vue-apex-charts>
-          </q-card-section>
-        </q-card>
+    <div class="charts-grid">
+      <div
+        v-for="(chart, index) in chartData"
+        :key="chart.signoNombre"
+        class="chart-card"
+        :style="{ animationDelay: `${(statCards.length + index) * 0.1}s` }"
+      >
+        <div class="chart-card-header">
+          <div class="chart-title">
+            <q-icon :name="getIconForStat(chart.signoNombre)" size="24px" class="chart-icon" />
+            <span>{{ chart.signoNombre }}</span>
+          </div>
+          <div class="chart-badge">{{ chart.unidad }}</div>
+        </div>
+        <div class="chart-card-body">
+          <vue-apex-charts
+            type="line"
+            height="280"
+            :options="getChartOptions(chart.signoNombre, chart.unidad)"
+            :series="chart.series"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -43,12 +63,16 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  internacion: {
+    type: Object,
+    required: true,
+  },
 })
 
 const rangosNormales = {
   'Frecuencia Cardíaca': { min: 60, max: 100 },
   'Frecuencia Respiratoria': { min: 12, max: 20 },
-  'Presión Arterial': { min: 90, max: 120 }, // Asumiendo solo la Sistólica
+  'Presión Arterial': { min: 90, max: 120 },
   'Saturación de Oxígeno': { min: 95, max: 100 },
   Temperatura: { min: 36.5, max: 37.5 },
   'Glucosa Capilar': { min: 70, max: 140 },
@@ -58,9 +82,41 @@ const ejesY = {
   'Frecuencia Cardíaca': { min: 40, max: 180 },
   'Frecuencia Respiratoria': { min: 0, max: 40 },
   'Presión Arterial': { min: 60, max: 200 },
-  'Saturación de Oxígeno': { min: 80, max: 101 }, // Ajustado para ver valores críticos
-  Temperatura: { min: 30, max: 42 }, // Ajustado para ver valores críticos
+  'Saturación de Oxígeno': { min: 80, max: 101 },
+  Temperatura: { min: 30, max: 42 },
   'Glucosa Capilar': { min: 40, max: 250 },
+}
+
+function getIconForStat(nombre) {
+  const iconMap = {
+    'Frecuencia Cardíaca': 'favorite',
+    'Frecuencia Respiratoria': 'air',
+    'Presión Arterial': 'monitor_heart',
+    'Saturación de Oxígeno': 'water_drop',
+    Temperatura: 'thermostat',
+    'Glucosa Capilar': 'bloodtype',
+  }
+  return iconMap[nombre] || 'analytics'
+}
+
+function getStatusClass(nombre, valor) {
+  const rango = rangosNormales[nombre]
+  if (!rango) return 'status-normal'
+
+  const numValor = parseFloat(valor)
+  if (numValor < rango.min) return 'status-bajo'
+  if (numValor > rango.max) return 'status-alto'
+  return 'status-normal'
+}
+
+function getStatusText(nombre, valor) {
+  const rango = rangosNormales[nombre]
+  if (!rango) return 'Normal'
+
+  const numValor = parseFloat(valor)
+  if (numValor < rango.min) return 'Bajo'
+  if (numValor > rango.max) return 'Alto'
+  return 'Normal'
 }
 
 function getChartOptions(title, unit) {
@@ -74,12 +130,12 @@ function getChartOptions(title, unit) {
         {
           y: rango.min,
           y2: rango.max,
-          borderColor: '#000',
-          fillColor: '#00E396',
-          opacity: 0.2,
+          borderColor: '#10b981',
+          fillColor: '#10b981',
+          opacity: 0.15,
           label: {
-            borderColor: '#00E396',
-            style: { color: '#fff', background: '#00E396' },
+            borderColor: '#10b981',
+            style: { color: '#fff', background: '#10b981', fontSize: '11px', fontWeight: 600 },
             text: 'Rango Normal',
             position: 'right',
           },
@@ -91,33 +147,61 @@ function getChartOptions(title, unit) {
   return {
     annotations: annotations,
     chart: {
-      height: 250,
+      height: 280,
       type: 'line',
       zoom: { enabled: false },
-      toolbar: { show: true, tools: { download: true, pan: false, zoom: false, reset: true } },
+      toolbar: {
+        show: true,
+        tools: {
+          download: true,
+          pan: false,
+          zoom: false,
+          reset: true,
+        },
+      },
+      fontFamily: 'inherit',
     },
     dataLabels: { enabled: false },
-    stroke: { curve: 'smooth', width: 3, colors: ['#2196F3'] }, // La línea principal siempre azul
+    stroke: {
+      curve: 'smooth',
+      width: 3,
+      colors: ['#10b981'],
+    },
     markers: {
       size: 5,
-      colors: ['#2196F3', '#F44336'], // Primer color para la serie principal, segundo para la de alerta
+      colors: ['#10b981', '#ef4444'],
       strokeColors: '#fff',
       strokeWidth: 2,
       hover: { size: 7 },
     },
     xaxis: {
       type: 'datetime',
-      labels: { formatter: (value) => format(new Date(value), 'dd/MM HH:mm') },
+      labels: {
+        formatter: (value) => format(new Date(value), 'dd/MM HH:mm'),
+        style: {
+          colors: '#64748b',
+          fontSize: '11px',
+        },
+      },
     },
     yaxis: {
       min: eje ? eje.min : undefined,
       max: eje ? eje.max : undefined,
+      labels: {
+        style: {
+          colors: '#64748b',
+          fontSize: '11px',
+        },
+      },
+    },
+    grid: {
+      borderColor: '#e2e8f0',
+      strokeDashArray: 4,
     },
     tooltip: {
       x: { formatter: (value) => format(new Date(value), 'dd/MM/yyyy HH:mm') },
       y: {
         formatter: function (value, { dataPointIndex, w }) {
-          // Asegúrate de tomar los datos de la primera serie (la línea principal) para el tooltip
           const dataPoint = w.globals.initialSeries[0].data[dataPointIndex] || {}
           const usuario = dataPoint.user || 'No disponible'
           const rol = dataPoint.rol || ''
@@ -125,20 +209,24 @@ function getChartOptions(title, unit) {
 
           let observacionHtml = ''
           if (observacion) {
-            observacionHtml = `<div class="q-mt-sm text-caption text-grey-8" style="font-style: italic;">Obs: ${observacion}</div>`
+            observacionHtml = `<div style="margin-top: 8px; font-size: 11px; color: #64748b; font-style: italic;">Obs: ${observacion}</div>`
           }
 
           return `
-            <div>
-              <span class="text-h6">${value}</span> <span class="text-grey-7">${unit}</span>
-              <div class="q-mt-xs text-caption text-grey-8">
-                Registrado por: <strong>${usuario}</strong> (${rol})
+            <div style="padding: 4px;">
+              <div style="font-size: 18px; font-weight: 700; color: #10b981;">${value} <span style="font-size: 12px; color: #64748b;">${unit}</span></div>
+              <div style="margin-top: 6px; font-size: 11px; color: #64748b;">
+                Registrado por: <strong style="color: #1e293b;">${usuario}</strong> (${rol})
               </div>
               ${observacionHtml}
             </div>
           `
         },
       },
+      theme: 'light',
+    },
+    legend: {
+      show: false,
     },
   }
 }
@@ -168,7 +256,6 @@ const chartData = computed(() => {
     control.valores.forEach((valor) => {
       const nombreSigno = valor.signo.nombre
       if (!dataAgrupada[nombreSigno]) {
-        // Ahora tendremos dos arrays de datos: uno para la línea y otro para los puntos de alerta
         dataAgrupada[nombreSigno] = { data: [], alertPoints: [], unidad: valor.signo.unidad }
       }
 
@@ -187,15 +274,12 @@ const chartData = computed(() => {
         observacion: observacion,
       }
 
-      // Siempre añadir a la serie de la línea principal
       dataAgrupada[nombreSigno].data.push(commonPointData)
 
-      // Si el valor está fuera de rango, añadir a la serie de puntos de alerta
       const rango = rangosNormales[nombreSigno]
       if (rango && (yValue < rango.min || yValue > rango.max)) {
         dataAgrupada[nombreSigno].alertPoints.push(commonPointData)
       } else {
-        // Si está dentro de rango, añadimos un punto con y: null para que no se dibuje el marcador rojo
         dataAgrupada[nombreSigno].alertPoints.push({ x: xValue, y: null })
       }
     })
@@ -207,33 +291,336 @@ const chartData = computed(() => {
       signoNombre,
       unidad: dataAgrupada[signoNombre].unidad,
       series: [
-        { name: signoNombre, data: dataAgrupada[signoNombre].data }, // Serie de la línea (azul)
-        { name: 'Alerta', data: dataAgrupada[signoNombre].alertPoints, type: 'scatter' }, // Serie de puntos de alerta (rojos)
+        { name: signoNombre, data: dataAgrupada[signoNombre].data },
+        { name: 'Alerta', data: dataAgrupada[signoNombre].alertPoints, type: 'scatter' },
       ],
     }))
 })
 </script>
 
 <style scoped>
-.stat-card {
-  text-align: center;
-  border-left: 4px solid var(--q-primary);
-  height: 100%;
+.signos-vitales-container {
+  width: 100%;
+  background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+  padding: 24px;
 }
-.stat-label {
-  font-size: 0.8rem;
-  color: #6c757d;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-.stat-value {
-  font-size: 1.8rem;
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
   font-weight: 700;
-  line-height: 1.2;
-  color: #343a40;
+  color: white;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: slideInUp 0.5s ease-out backwards;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+}
+
+.stat-card-header {
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon {
+  color: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.stat-card-body {
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
 .stat-unidad {
-  font-size: 0.9rem;
-  color: #6c757d;
+  font-size: 0.875rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.stat-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-normal {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-alto {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-bajo {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.chart-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: slideInUp 0.5s ease-out backwards;
+}
+
+.chart-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+}
+
+.chart-card-header {
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chart-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.chart-icon {
+  color: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.chart-badge {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.chart-card-body {
+  padding: 24px;
+  background: #fafafa;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1024px) {
+  .signos-vitales-container {
+    padding: 20px;
+  }
+
+  .charts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .signos-vitales-container {
+    padding: 16px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .stat-card-header {
+    padding: 16px;
+  }
+
+  .stat-icon {
+    font-size: 24px !important;
+  }
+
+  .stat-card-body {
+    padding: 16px;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+  }
+
+  .chart-card-header {
+    padding: 16px 20px;
+  }
+
+  .chart-title {
+    font-size: 0.875rem;
+  }
+
+  .chart-icon {
+    font-size: 20px !important;
+  }
+
+  .chart-card-body {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .signos-vitales-container {
+    padding: 12px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .stat-card-header {
+    padding: 12px;
+  }
+
+  .stat-icon {
+    font-size: 20px !important;
+  }
+
+  .stat-card-body {
+    padding: 12px;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+  }
+
+  .stat-unidad {
+    font-size: 0.75rem;
+  }
+
+  .stat-status {
+    font-size: 0.625rem;
+    padding: 3px 10px;
+  }
+
+  .chart-card-header {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .chart-title {
+    font-size: 0.8rem;
+  }
+
+  .chart-badge {
+    align-self: flex-start;
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+
+  .chart-card-body {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .signos-vitales-container {
+    padding: 8px;
+  }
+
+  .stats-grid {
+    gap: 8px;
+  }
+
+  .stat-value {
+    font-size: 1.1rem;
+  }
+
+  .charts-grid {
+    gap: 12px;
+  }
 }
 </style>

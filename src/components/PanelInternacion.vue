@@ -94,27 +94,30 @@
               class="text-capitalize"
             />
             <q-btn flat round icon="more_vert" v-if="!dashboardData.fecha_alta">
-              <q-menu
-                ><q-list>
+              <q-menu>
+                <q-list dense>
                   <q-item
                     clickable
                     v-ripple
                     @click="abrirDialogoEditar(tratamiento)"
                     :disable="tratamiento.estado !== 0"
-                    ><q-item-section avatar><q-icon name="edit" /></q-item-section
-                    ><q-item-section>Modificar</q-item-section></q-item
                   >
+                    <q-item-section avatar><q-icon name="edit" /></q-item-section>
+                    <q-item-section>Modificar</q-item-section>
+                  </q-item>
                   <q-item
                     clickable
                     v-ripple
                     @click="suspenderTratamiento(tratamiento.id)"
                     :disable="tratamiento.estado !== 0"
-                    ><q-item-section avatar
-                      ><q-icon name="pause_circle" color="orange" /></q-item-section
-                    ><q-item-section>Suspender</q-item-section></q-item
                   >
-                </q-list></q-menu
-              >
+                    <q-item-section avatar>
+                      <q-icon name="pause_circle_outline" color="deep-orange" />
+                    </q-item-section>
+                    <q-item-section>Suspender Tratamiento Completo</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
             </q-btn>
           </div>
         </q-card-section>
@@ -124,18 +127,44 @@
             <strong>Prescrito por:</strong> Dr. {{ tratamiento.medico.nombre }}
             {{ tratamiento.medico.apellidos }}
           </p>
+
           <q-list bordered separator v-if="tratamiento.recetas && tratamiento.recetas.length > 0">
             <q-item-label header>Medicamentos</q-item-label>
             <q-item v-for="receta in tratamiento.recetas" :key="receta.id">
               <q-item-section>
-                <q-item-label class="text-weight-medium">{{
-                  receta.medicamento.nombre
-                }}</q-item-label>
-                <q-item-label caption
-                  >{{ receta.dosis }} - {{ receta.via_administracion }} - Cada
-                  {{ receta.frecuencia_horas }} horas por
-                  {{ receta.duracion_dias }} días.</q-item-label
-                >
+                <q-item-label class="text-weight-medium">
+                  {{ receta.medicamento.nombre }}
+                  <q-badge
+                    v-if="receta.estado === 1"
+                    color="orange"
+                    label="Suspendido"
+                    class="q-ml-sm"
+                  />
+                </q-item-label>
+                <q-item-label caption :class="{ 'text-strike text-grey-6': receta.estado === 1 }">
+                  {{ receta.dosis }} - {{ receta.via_administracion }} - Cada
+                  {{ receta.frecuencia_horas }} horas por {{ receta.duracion_dias }} días.
+                </q-item-label>
+              </q-item-section>
+
+              <q-item-section side>
+                <q-btn flat round icon="more_vert" size="sm" v-if="!dashboardData.fecha_alta">
+                  <q-menu anchor="bottom right" self="top right">
+                    <q-list dense>
+                      <q-item
+                        clickable
+                        v-ripple
+                        @click="suspenderReceta(receta.id)"
+                        :disable="receta.estado !== 0"
+                      >
+                        <q-item-section avatar style="min-width: 40px">
+                          <q-icon name="pause_circle" color="orange" />
+                        </q-item-section>
+                        <q-item-section>Suspender Medicamento</q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-menu>
+                </q-btn>
               </q-item-section>
             </q-item>
           </q-list>
@@ -321,7 +350,6 @@
 
 <script>
 import { defineComponent, ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
 import { Loading, Notify, Dialog } from 'quasar'
 import { format, differenceInYears } from 'date-fns'
 import { api } from 'boot/axios'
@@ -332,11 +360,14 @@ import SignosVitalesDashboard from 'src/components/SignosVitalesDashboard.vue'
 export default defineComponent({
   name: 'PanelInternacion',
   components: { FormularioPrescripcion, FormularioAlimentacion, SignosVitalesDashboard },
-  setup() {
-    const route = useRoute()
-    const internacionId = route.params.id
-
-    // --- ESTADOS REACTIVOS ---
+  props: {
+    internacionId: {
+      type: [String, Number],
+      required: true,
+    },
+  },
+  setup(props) {
+    const internacionId = props.internacionId
     const isLoading = ref(true)
     const error = ref(null)
     const dashboardData = ref(null)
@@ -353,8 +384,6 @@ export default defineComponent({
     const alimentacionSeleccionada = ref(null)
     const formularioAlimentacionRef = ref(null)
 
-    // ✅ --- CORRECCIÓN DEFINITIVA --- ✅
-    // Se blindan las computadas para que no fallen si los datos vienen incompletos.
     const controlesConValores = computed(() => {
       if (!dashboardData.value || !Array.isArray(dashboardData.value.controls)) {
         return []
@@ -405,7 +434,6 @@ export default defineComponent({
 
     onMounted(fetchData)
 
-    // --- FUNCIONES DE AYUDA ---
     function calcularEdad(fechaNacimiento) {
       if (!fechaNacimiento) return 'N/A'
       return differenceInYears(new Date(), new Date(fechaNacimiento))
@@ -436,7 +464,6 @@ export default defineComponent({
       return colores[estadoNum] ?? 'primary'
     }
 
-    // --- FUNCIONES DE ACCIÓN ---
     function abrirDialogoTratamiento() {
       tratamientoSeleccionado.value = null
       mostrarDialogoTratamiento.value = true
@@ -477,7 +504,7 @@ export default defineComponent({
 
     async function suspenderTratamiento(tratamientoId) {
       Dialog.create({
-        title: 'Suspender Tratamiento',
+        title: 'Suspender Tratamiento Completo',
         message: 'Ingrese el motivo de la suspensión:',
         prompt: {
           model: '',
@@ -487,13 +514,39 @@ export default defineComponent({
         cancel: true,
         persistent: true,
       }).onOk(async (motivo) => {
-        Loading.show({ message: 'Suspendiendo...' })
+        Loading.show({ message: 'Suspendiendo tratamiento...' })
         try {
           await api.post(`/tratamientos/${tratamientoId}/suspender`, { motivo })
           Notify.create({ color: 'positive', message: 'Tratamiento suspendido con éxito.' })
           await fetchData()
         } catch (err) {
           const errorMessage = err.response?.data?.message || 'Error al suspender el tratamiento.'
+          Notify.create({ color: 'negative', message: errorMessage })
+        } finally {
+          Loading.hide()
+        }
+      })
+    }
+
+    async function suspenderReceta(recetaId) {
+      Dialog.create({
+        title: 'Suspender Medicamento',
+        message: 'Ingrese el motivo de la suspensión:',
+        prompt: {
+          model: '',
+          type: 'textarea',
+          isValid: (val) => val.length >= 10 || 'El motivo debe tener al menos 10 caracteres.',
+        },
+        cancel: true,
+        persistent: true,
+      }).onOk(async (motivo) => {
+        Loading.show({ message: 'Suspendiendo medicamento...' })
+        try {
+          await api.post(`/recetas/${recetaId}/suspender`, { motivo })
+          Notify.create({ color: 'positive', message: 'Medicamento suspendido con éxito.' })
+          await fetchData()
+        } catch (err) {
+          const errorMessage = err.response?.data?.message || 'Error al suspender.'
           Notify.create({ color: 'negative', message: errorMessage })
         } finally {
           Loading.hide()
@@ -621,7 +674,6 @@ export default defineComponent({
       mostrarDialogoTratamiento,
       tratamientoSeleccionado,
       formularioPrescripcionRef,
-      internacionId,
       hayTratamientoActivo,
       mostrarDialogoEvolucion,
       nuevaObservacion,
@@ -635,6 +687,7 @@ export default defineComponent({
       abrirDialogoEditar,
       guardarTratamiento,
       suspenderTratamiento,
+      suspenderReceta,
       darDeAlta,
       abrirDialogoEvolucion,
       guardarEvolucion,
@@ -657,7 +710,5 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.page-background {
-  background-color: #f8fafc;
-}
+/* Sin cambios en el CSS */
 </style>

@@ -54,12 +54,7 @@ const routes = [
         component: () => import('pages/GestionUsuariosRolesPage.vue'),
         meta: { permission: 'acceso.usuarios-y-roles' },
       },
-      {
-        path: 'pacientes/internacion/:id',
-        name: 'PanelInternacion',
-        component: () => import('pages/PanelInternacion.vue'),
-        meta: { permission: 'acceso.panel-internacion' },
-      },
+
       {
         path: 'mis-pacientes',
         name: 'MisPacientes',
