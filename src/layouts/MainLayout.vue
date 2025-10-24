@@ -19,11 +19,14 @@
           class="nav-item"
           active-class="nav-item-active"
           v-if="userStore.hasPermission('acceso.dashboard')"
-          ><q-item-section avatar><q-icon name="dashboard" class="nav-icon" /></q-item-section
-          ><q-item-section
-            ><q-item-label class="nav-label">Dashboard</q-item-label></q-item-section
-          ></q-item
         >
+          <q-item-section avatar>
+            <q-icon name="dashboard" class="nav-icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Dashboard</q-item-label>
+          </q-item-section>
+        </q-item>
         <q-item
           clickable
           v-ripple
@@ -31,11 +34,14 @@
           class="nav-item"
           active-class="nav-item-active"
           v-if="userStore.hasPermission('acceso.gestion-hospital')"
-          ><q-item-section avatar><q-icon name="business" class="nav-icon" /></q-item-section
-          ><q-item-section
-            ><q-item-label class="nav-label">Gestión de Hospital</q-item-label></q-item-section
-          ></q-item
         >
+          <q-item-section avatar>
+            <q-icon name="business" class="nav-icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Gestión de Hospital</q-item-label>
+          </q-item-section>
+        </q-item>
         <q-item
           clickable
           v-ripple
@@ -43,11 +49,14 @@
           class="nav-item"
           active-class="nav-item-active"
           v-if="userStore.hasPermission('acceso.admision')"
-          ><q-item-section avatar><q-icon name="login" class="nav-icon" /></q-item-section
-          ><q-item-section
-            ><q-item-label class="nav-label">Admisión de Pacientes</q-item-label></q-item-section
-          ></q-item
         >
+          <q-item-section avatar>
+            <q-icon name="login" class="nav-icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Admisión de Pacientes</q-item-label>
+          </q-item-section>
+        </q-item>
         <q-item
           clickable
           v-ripple
@@ -55,11 +64,14 @@
           class="nav-item"
           active-class="nav-item-active"
           v-if="userStore.hasPermission('acceso.pacientes')"
-          ><q-item-section avatar><q-icon name="groups" class="nav-icon" /></q-item-section
-          ><q-item-section
-            ><q-item-label class="nav-label">Gestión de Pacientes</q-item-label></q-item-section
-          ></q-item
         >
+          <q-item-section avatar>
+            <q-icon name="groups" class="nav-icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Gestión de Pacientes</q-item-label>
+          </q-item-section>
+        </q-item>
         <q-item
           clickable
           v-ripple
@@ -67,12 +79,14 @@
           class="nav-item"
           active-class="nav-item-active"
           v-if="userStore.hasPermission('acceso.usuarios-y-roles')"
-          ><q-item-section avatar
-            ><q-icon name="admin_panel_settings" class="nav-icon" /></q-item-section
-          ><q-item-section
-            ><q-item-label class="nav-label">Usuarios y Roles</q-item-label></q-item-section
-          ></q-item
         >
+          <q-item-section avatar>
+            <q-icon name="admin_panel_settings" class="nav-icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Usuarios y Roles</q-item-label>
+          </q-item-section>
+        </q-item>
         <q-item
           clickable
           v-ripple
@@ -80,11 +94,14 @@
           class="nav-item"
           active-class="nav-item-active"
           v-if="userStore.hasPermission('acceso.medicamentos')"
-          ><q-item-section avatar><q-icon name="medication" class="nav-icon" /></q-item-section
-          ><q-item-section
-            ><q-item-label class="nav-label">Gestión de Farmacia</q-item-label></q-item-section
-          ></q-item
         >
+          <q-item-section avatar>
+            <q-icon name="medication" class="nav-icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Gestión de Farmacia</q-item-label>
+          </q-item-section>
+        </q-item>
         <q-item
           clickable
           v-ripple
@@ -93,9 +110,9 @@
           active-class="nav-item-active"
           v-if="userStore.hasPermission('acceso.mis-pacientes')"
         >
-          <q-item-section avatar
-            ><q-icon name="medication_liquid" class="nav-icon"
-          /></q-item-section>
+          <q-item-section avatar>
+            <q-icon name="medication_liquid" class="nav-icon" />
+          </q-item-section>
           <q-item-section>
             <q-item-label class="nav-label">Mis Pacientes</q-item-label>
           </q-item-section>
@@ -108,10 +125,12 @@
           active-class="nav-item-active"
           v-if="userStore.hasPermission('acceso.estacion-enfermeria')"
         >
-          <q-item-section avatar><q-icon name="local_pharmacy" class="nav-icon" /></q-item-section>
-          <q-item-section
-            ><q-item-label class="nav-label">Estación de Enfermería</q-item-label></q-item-section
-          >
+          <q-item-section avatar>
+            <q-icon name="local_pharmacy" class="nav-icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Estación de Enfermería</q-item-label>
+          </q-item-section>
         </q-item>
       </q-list>
 
@@ -134,6 +153,9 @@
           <span class="title-text">Dashboard Principal</span>
         </q-toolbar-title>
         <div class="header-actions">
+          <!-- Added NotificationBell component for doctors -->
+          <NotificationBell v-if="userStore.hasPermission('acceso.mis-pacientes')" />
+
           <q-btn flat round dense icon="account_circle" class="action-btn profile-btn">
             <q-menu anchor="bottom right" self="top right" class="profile-menu">
               <div class="user-info-header q-pa-md text-white">
@@ -148,7 +170,9 @@
                   v-close-popup
                   class="profile-menu-item"
                 >
-                  <q-item-section avatar><q-icon name="person" /></q-item-section>
+                  <q-item-section avatar>
+                    <q-icon name="person" />
+                  </q-item-section>
                   <q-item-section>Mi Perfil</q-item-section>
                 </q-item>
                 <q-item
@@ -158,7 +182,9 @@
                   v-close-popup
                   class="profile-menu-item"
                 >
-                  <q-item-section avatar><q-icon name="lock_reset" /></q-item-section>
+                  <q-item-section avatar>
+                    <q-icon name="lock_reset" />
+                  </q-item-section>
                   <q-item-section>Cambiar Contraseña</q-item-section>
                 </q-item>
                 <q-separator spaced />
@@ -169,7 +195,9 @@
                   v-close-popup
                   class="profile-menu-item-logout"
                 >
-                  <q-item-section avatar><q-icon name="logout" /></q-item-section>
+                  <q-item-section avatar>
+                    <q-icon name="logout" />
+                  </q-item-section>
                   <q-item-section>Cerrar Sesión</q-item-section>
                 </q-item>
               </q-list>
@@ -193,6 +221,7 @@ import { useUserStore } from 'stores/user'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import UserProfileModal from 'components/UserProfileModal.vue'
+import NotificationBell from 'components/NotificationBell.vue'
 
 const userStore = useUserStore()
 const $q = useQuasar()
@@ -204,7 +233,6 @@ const userName = computed(() =>
 )
 const userRole = computed(() => userStore.user?.rol?.nombre || 'Sin Rol Asignado')
 
-// Lógica para manejar el modal
 const showProfileModal = ref(false)
 const activeTab = ref('profile')
 
@@ -213,7 +241,6 @@ const openProfileModal = (initialTab = 'profile') => {
   showProfileModal.value = true
 }
 
-// TU FUNCIÓN CERRAR SESIÓN ORIGINAL
 const cerrarSesion = async () => {
   await userStore.logout()
   router.push('/login')
@@ -229,7 +256,6 @@ const drawer = ref(true)
 </script>
 
 <style scoped>
-/* TUS ESTILOS ORIGINALES */
 .main-layout {
   background: #f8fafc;
 }
@@ -411,7 +437,6 @@ const drawer = ref(true)
   }
 }
 
-/* ESTILOS NUEVOS PARA EL MENÚ DE PERFIL */
 .profile-menu {
   border-radius: 12px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);

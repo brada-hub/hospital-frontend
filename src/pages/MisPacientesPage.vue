@@ -121,21 +121,52 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from 'boot/axios'
 import { Notify } from 'quasar'
 import { format } from 'date-fns'
 import PanelInternacion from 'src/components/PanelInternacion.vue'
 
+const route = useRoute()
+const router = useRouter()
 const internaciones = ref([])
 const isLoading = ref(true)
 const mostrarPanelClinico = ref(false)
 const internacionSeleccionada = ref(null)
+
+onMounted(() => {
+  fetchMisPacientes()
+})
 
 async function fetchMisPacientes() {
   isLoading.value = true
   try {
     const response = await api.get('/mis-pacientes')
     internaciones.value = response.data
+
+    const internacionIdFromQuery = route.query.internacion
+    if (internacionIdFromQuery) {
+      // Verify the internacion exists in the list
+      const internacionExists = internaciones.value.some(
+        (i) => i.id === parseInt(internacionIdFromQuery),
+      )
+
+      if (internacionExists) {
+        // Auto-open the panel for this patient
+        abrirPanelClinico(parseInt(internacionIdFromQuery))
+
+        // Clean up the URL by removing the query parameter
+        router.replace({ query: {} })
+      } else {
+        Notify.create({
+          color: 'warning',
+          message: 'El paciente de la notificación no está en tu lista actual.',
+          icon: 'warning',
+        })
+        // Clean up the URL
+        router.replace({ query: {} })
+      }
+    }
   } catch (error) {
     console.error('Error al cargar mis pacientes:', error)
     Notify.create({
@@ -164,8 +195,6 @@ function cerrarPanelClinico() {
   // Recargar la lista de pacientes al cerrar el panel
   fetchMisPacientes()
 }
-
-onMounted(fetchMisPacientes)
 </script>
 
 <style scoped>
