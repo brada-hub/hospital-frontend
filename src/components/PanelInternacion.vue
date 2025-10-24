@@ -73,6 +73,30 @@
               @click="darDeAlta"
             />
           </div>
+
+          <div v-else class="q-gutter-sm">
+            <q-btn
+              color="primary"
+              icon="picture_as_pdf"
+              label="Descargar Epicrisis"
+              @click="descargarEpicrisis"
+              unelevated
+            />
+            <q-btn
+              color="secondary"
+              icon="description"
+              label="Evolución Clínica"
+              @click="descargarEvolucionClinica"
+              unelevated
+            />
+            <q-btn
+              color="teal"
+              icon="bar_chart"
+              label="Estadísticas"
+              @click="descargarEstadisticas"
+              outline
+            />
+          </div>
         </q-card-section>
       </q-card>
 
@@ -609,6 +633,17 @@ export default defineComponent({
           await api.put(`/internaciones/${internacionId}/alta`)
           Notify.create({ type: 'positive', message: 'Paciente dado de alta correctamente.' })
           await fetchData()
+
+          Dialog.create({
+            title: 'Epicrisis Generada',
+            message:
+              'El paciente ha sido dado de alta exitosamente. ¿Desea descargar la epicrisis ahora?',
+            cancel: { label: 'Más tarde', flat: true, color: 'grey' },
+            ok: { label: 'Descargar Epicrisis', color: 'primary', icon: 'picture_as_pdf' },
+            persistent: false,
+          }).onOk(() => {
+            descargarEpicrisis()
+          })
         } catch (err) {
           Notify.create({
             type: 'negative',
@@ -618,6 +653,105 @@ export default defineComponent({
           Loading.hide()
         }
       })
+    }
+
+    async function descargarEpicrisis() {
+      try {
+        Loading.show({ message: 'Generando epicrisis en PDF...' })
+        const response = await api.get(`/reportes/epicrisis/${internacionId}`, {
+          responseType: 'blob',
+        })
+
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
+        const fileName = `Epicrisis_${dashboardData.value.paciente.apellidos}_${dashboardData.value.paciente.ci}_${format(new Date(), 'ddMMyyyy')}.pdf`
+        link.setAttribute('download', fileName)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+
+        Notify.create({
+          type: 'positive',
+          message: 'Epicrisis descargada correctamente.',
+          icon: 'check_circle',
+        })
+      } catch (err) {
+        Notify.create({
+          type: 'negative',
+          message: err.response?.data?.message || 'Error al descargar la epicrisis.',
+          caption: 'Verifique que el paciente esté dado de alta.',
+        })
+      } finally {
+        Loading.hide()
+      }
+    }
+
+    async function descargarEvolucionClinica() {
+      try {
+        Loading.show({ message: 'Generando evolución clínica en PDF...' })
+        const response = await api.get(`/reportes/evolucion-clinica/${internacionId}`, {
+          responseType: 'blob',
+        })
+
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
+        const fileName = `EvolucionClinica_${dashboardData.value.paciente.apellidos}_${dashboardData.value.paciente.ci}_${format(new Date(), 'ddMMyyyy')}.pdf`
+        link.setAttribute('download', fileName)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+
+        Notify.create({
+          type: 'positive',
+          message: 'Evolución clínica descargada correctamente.',
+          icon: 'check_circle',
+        })
+      } catch (err) {
+        Notify.create({
+          type: 'negative',
+          message: err.response?.data?.message || 'Error al descargar la evolución clínica.',
+        })
+      } finally {
+        Loading.hide()
+      }
+    }
+
+    async function descargarEstadisticas() {
+      try {
+        Loading.show({ message: 'Generando estadísticas en PDF...' })
+        const response = await api.post(
+          `/reportes/estadisticas`,
+          { internacion_id: internacionId },
+          { responseType: 'blob' },
+        )
+
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
+        const fileName = `Estadisticas_${dashboardData.value.paciente.apellidos}_${dashboardData.value.paciente.ci}_${format(new Date(), 'ddMMyyyy')}.pdf`
+        link.setAttribute('download', fileName)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+
+        Notify.create({
+          type: 'positive',
+          message: 'Estadísticas descargadas correctamente.',
+          icon: 'check_circle',
+        })
+      } catch (err) {
+        Notify.create({
+          type: 'negative',
+          message: err.response?.data?.message || 'Error al descargar las estadísticas.',
+        })
+      } finally {
+        Loading.hide()
+      }
     }
 
     return {
@@ -658,6 +792,9 @@ export default defineComponent({
       controlesConValores,
       notasDeEvolucion,
       darDeAlta,
+      descargarEpicrisis,
+      descargarEvolucionClinica,
+      descargarEstadisticas,
     }
   },
 })
