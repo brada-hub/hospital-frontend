@@ -71,6 +71,20 @@
 
     <q-separator class="section-separator" />
 
+    <PanelAlimentacion
+      v-if="tratamientoPrincipalId"
+      :internacion-id="internacion.id"
+      :tratamiento-id="tratamientoPrincipalId"
+      class="component-section"
+    />
+    <div v-else class="component-section no-datos">
+      <q-icon name="restaurant_menu" size="48px" />
+      <span class="q-mt-md"
+        >No hay un tratamiento activo al cual asociar el consumo de alimentos.</span
+      >
+    </div>
+    <q-separator class="section-separator" />
+
     <ListaTratamientos
       :internacion="internacion"
       class="component-section"
@@ -125,7 +139,10 @@
 </template>
 
 <script setup>
+// ****** AÑADIR/MODIFICAR ESTO ******
 import { ref, defineProps, defineEmits, computed } from 'vue'
+// ****** FIN DE MODIFICACIÓN ******
+
 import { api } from 'boot/axios'
 import { Notify, Dialog } from 'quasar'
 import FormularioSignosVitales from 'src/components/FormularioSignosVitales.vue'
@@ -134,6 +151,10 @@ import PlanCuidados from 'src/components/PlanCuidados.vue'
 import EvolucionEnfermeria from 'src/components/EvolucionEnfermeria.vue'
 import { useUserStore } from 'stores/user'
 import SignosVitalesDashboard from 'src/components/SignosVitalesDashboard.vue'
+
+// ****** INICIO DE SECCIÓN AÑADIDA ******
+import PanelAlimentacion from './PanelAlimentacion.vue'
+// ****** FIN DE SECCIÓN AÑADIDA ******
 
 const props = defineProps({
   internacion: {
@@ -160,6 +181,24 @@ const haySignosVitales = computed(() => {
     (c) => c && Array.isArray(c.valores) && c.valores.length > 0,
   )
 })
+
+// ****** INICIO DE SECCIÓN AÑADIDA ******
+// Este computed property es crucial. Busca un ID de tratamiento
+// en los datos de la internación.
+// Asegúrate de que la API que carga 'internacion' (en EstacionEnfermeria.vue)
+// incluya la relación 'tratamientos'.
+const tratamientoPrincipalId = computed(() => {
+  if (props.internacion.tratamientos && props.internacion.tratamientos.length > 0) {
+    // Usamos el ID del primer tratamiento de la lista
+    return props.internacion.tratamientos[0].id
+  }
+
+  // Si no hay tratamientos, no podemos registrar consumo
+  // (porque 'consumes' requiere 'tratamiento_id')
+  console.warn('No se encontró un ID de tratamiento en la internación.')
+  return null
+})
+// ****** FIN DE SECCIÓN AÑADIDA ******
 
 function abrirDialogoRegistrarSignos(internacion) {
   internacionSeleccionada.value = internacion
@@ -242,6 +281,10 @@ function abrirDialogoCrearCuidadoRapido(internacion) {
 </script>
 
 <style scoped>
+/* Tu CSS existente va aquí... */
+/* ... */
+/* Pega aquí todo el CSS que ya tenías */
+
 .dashboard-paciente {
   padding: 20px;
   background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);

@@ -12,16 +12,19 @@
     </div>
 
     <div v-else-if="dashboardData">
+      <!-- Información del paciente -->
       <q-card flat bordered class="q-mb-md">
         <q-card-section class="row items-center justify-between">
           <div>
             <div class="text-h5">
-              {{ dashboardData.paciente.nombre }} {{ dashboardData.paciente.apellidos }}
+              {{ dashboardData.paciente.nombre }}
+              {{ dashboardData.paciente.apellidos }}
             </div>
             <div class="text-subtitle1 text-grey-8">
               C.I: {{ dashboardData.paciente.ci }} | Edad:
               {{ calcularEdad(dashboardData.paciente.fecha_nacimiento) }} años
             </div>
+
             <q-badge
               v-if="!dashboardData.fecha_alta"
               color="positive"
@@ -39,6 +42,7 @@
               class="q-mt-sm"
             />
           </div>
+
           <div v-if="!dashboardData.fecha_alta">
             <q-btn
               v-if="!hayTratamientoActivo"
@@ -48,6 +52,7 @@
               @click="abrirDialogoTratamiento"
               class="q-mr-sm"
             />
+
             <q-btn
               color="teal"
               icon="restaurant_menu"
@@ -60,6 +65,7 @@
                 Suspenda la dieta activa para agregar una nueva.
               </q-tooltip>
             </q-btn>
+
             <q-btn
               color="negative"
               icon="medical_services"
@@ -70,7 +76,9 @@
         </q-card-section>
       </q-card>
 
+      <!-- Tratamientos -->
       <div class="text-h6 q-my-md">Tratamientos</div>
+
       <div
         v-if="!dashboardData.tratamientos || !dashboardData.tratamientos.length"
         class="text-center text-grey-7 q-pa-lg"
@@ -78,6 +86,7 @@
         <q-icon name="medication" size="lg" />
         <p>No hay tratamientos prescritos.</p>
       </div>
+
       <q-card
         v-for="tratamiento in dashboardData.tratamientos"
         :key="tratamiento.id"
@@ -121,6 +130,7 @@
             </q-btn>
           </div>
         </q-card-section>
+
         <q-card-section>
           <p><strong>Descripción:</strong> {{ tratamiento.descripcion }}</p>
           <p v-if="tratamiento.medico">
@@ -146,7 +156,6 @@
                   {{ receta.frecuencia_horas }} horas por {{ receta.duracion_dias }} días.
                 </q-item-label>
               </q-item-section>
-
               <q-item-section side>
                 <q-btn flat round icon="more_vert" size="sm" v-if="!dashboardData.fecha_alta">
                   <q-menu anchor="bottom right" self="top right">
@@ -171,74 +180,69 @@
         </q-card-section>
       </q-card>
 
+      <!-- Alimentación -->
       <div class="text-h6 q-my-md">Planes de Alimentación</div>
+
       <div
         v-if="!dashboardData.alimentaciones || !dashboardData.alimentaciones.length"
         class="text-center text-grey-7 q-pa-lg"
       >
-        <q-icon name="fastfood" size="lg" />
+        <q-icon name="restaurant_off" size="lg" />
         <p>No hay planes de alimentación prescritos.</p>
       </div>
+
+      <AlimentacionPanel
+        ref="panelAlimentacionRef"
+        v-if="hayAlimentacionActiva"
+        :internacion-id="internacionId"
+        :tratamiento-id="dashboardData.tratamientos?.[0]?.id"
+        @edit-request="abrirDialogoEditarAlimentacion"
+      />
+
       <q-card
-        v-for="alimentacion in dashboardData.alimentaciones"
+        v-for="alimentacion in alimentacionesSuspendidas"
         :key="alimentacion.id"
         flat
         bordered
         class="q-mb-md"
       >
-        <q-card-section
-          :class="alimentacion.estado === 0 ? 'bg-teal-1' : 'bg-grey-3'"
-          class="row items-center justify-between"
-        >
-          <div class="text-subtitle1 text-weight-bold text-teal-8">
-            {{ alimentacion.tipo_dieta.nombre }}
+        <q-card-section class="bg-grey-2 row items-center justify-between">
+          <div class="text-subtitle1 text-weight-bold">
+            {{ alimentacion.tipo_dieta?.nombre || 'Dieta sin nombre' }}
           </div>
           <div>
             <q-badge
-              :color="getColorPorEstadoAlimentacion(alimentacion.estado)"
-              :label="traducirEstadoAlimentacion(alimentacion.estado)"
+              :color="getAlimentacionColorPorEstado(alimentacion.estado)"
+              :label="getAlimentacionTextoEstado(alimentacion.estado)"
               class="text-capitalize"
             />
-            <q-btn flat round icon="more_vert" v-if="!dashboardData.fecha_alta">
-              <q-menu
-                ><q-list>
-                  <q-item
-                    clickable
-                    v-ripple
-                    @click="abrirDialogoEditarAlimentacion(alimentacion)"
-                    :disable="alimentacion.estado !== 0"
-                    ><q-item-section avatar><q-icon name="edit" /></q-item-section
-                    ><q-item-section>Modificar</q-item-section></q-item
-                  >
-                  <q-item
-                    clickable
-                    v-ripple
-                    @click="suspenderAlimentacion(alimentacion.id)"
-                    :disable="alimentacion.estado !== 0"
-                    ><q-item-section avatar
-                      ><q-icon name="pause_circle" color="orange" /></q-item-section
-                    ><q-item-section>Suspender</q-item-section></q-item
-                  >
-                </q-list></q-menu
-              >
-            </q-btn>
           </div>
         </q-card-section>
         <q-card-section>
-          <p v-if="alimentacion.estado === 1" class="text-orange-8" style="white-space: pre-wrap">
-            <strong>Motivo de Suspensión:</strong> {{ alimentacion.motivo_suspension }}
-          </p>
-          <p><strong>Descripción:</strong> {{ alimentacion.descripcion }}</p>
-          <p><strong>Frecuencia:</strong> {{ alimentacion.frecuencia }}</p>
-          <p>
-            <strong>Periodo:</strong> Del {{ formatDateTime(alimentacion.fecha_inicio) }} al
-            {{ formatDateTime(alimentacion.fecha_fin) }}
-          </p>
+          <p><strong>Vía:</strong> {{ alimentacion.via_administracion }}</p>
+          <p><strong>Observaciones:</strong> {{ alimentacion.descripcion }}</p>
+          <q-list
+            bordered
+            separator
+            dense
+            v-if="alimentacion.tiempos && alimentacion.tiempos.length > 0"
+          >
+            <q-item-label header dense>Tiempos de Comida</q-item-label>
+            <q-item v-for="tiempo in alimentacion.tiempos" :key="tiempo.id" dense>
+              <q-item-section>
+                <q-item-label class="text-weight-medium">{{ tiempo.tiempo_comida }}</q-item-label>
+                <q-item-label caption>{{ tiempo.descripcion || 'Sin detalle' }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
         </q-card-section>
       </q-card>
 
       <q-separator class="q-my-lg" />
+
+      <!-- Evolución y Signos Vitales -->
       <div class="text-h6 q-my-md">Monitor de Signos Vitales y Evolución</div>
+
       <div class="q-mb-md" v-if="!dashboardData.fecha_alta">
         <q-btn
           color="secondary"
@@ -271,10 +275,13 @@
               Por: {{ control.user.nombre }} {{ control.user.apellidos }}
             </div>
           </q-card-section>
-          <q-card-section style="white-space: pre-wrap">{{ control.observaciones }}</q-card-section>
+          <q-card-section style="white-space: pre-wrap">
+            {{ control.observaciones }}
+          </q-card-section>
         </q-card>
       </div>
 
+      <!-- Diálogo: Nuevo Tratamiento -->
       <q-dialog v-model="mostrarDialogoTratamiento" persistent>
         <q-card style="width: 800px; max-width: 90vw">
           <FormularioPrescripcion
@@ -294,31 +301,28 @@
         </q-card>
       </q-dialog>
 
+      <!-- Diálogo: Alimentación -->
       <q-dialog v-model="mostrarDialogoAlimentacion" persistent>
         <q-card style="width: 700px; max-width: 90vw">
-          <FormularioAlimentacion
+          <AlimentacionForm
             ref="formularioAlimentacionRef"
             :internacion-id="internacionId"
-            :alimentacion-para-editar="alimentacionSeleccionada"
-            :catalogo-tipos-dieta="catalogoTiposDieta"
+            :alimentacion="alimentacionSeleccionada"
+            @saved="handleAlimentacionSaved"
+            @cancel="mostrarDialogoAlimentacion = false"
           />
-          <q-card-actions align="right" class="q-pa-md bg-grey-2">
-            <q-btn flat label="Cancelar" color="grey-8" v-close-popup />
-            <q-btn
-              :label="alimentacionSeleccionada ? 'Guardar Cambios' : 'Prescribir Dieta'"
-              color="primary"
-              @click="guardarAlimentacion"
-            />
-          </q-card-actions>
         </q-card>
       </q-dialog>
 
+      <!-- Diálogo: Nota de evolución -->
       <q-dialog v-model="mostrarDialogoEvolucion" persistent>
         <q-card style="min-width: 500px; border-radius: 12px">
           <q-card-section class="row items-center bg-primary text-white">
             <div class="text-h6">Nueva Nota de Evolución</div>
-            <q-space /><q-btn icon="close" flat round dense v-close-popup />
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
+
           <q-form @submit.prevent="guardarEvolucion" ref="evolucionFormRef">
             <q-card-section class="q-pt-md">
               <q-input
@@ -331,6 +335,7 @@
                 :rules="[(val) => !!val || 'La observación no puede estar vacía']"
               />
             </q-card-section>
+
             <q-card-actions align="right" class="q-pa-md bg-grey-2">
               <q-btn label="Cancelar" color="grey" v-close-popup flat />
               <q-btn
@@ -354,12 +359,18 @@ import { Loading, Notify, Dialog } from 'quasar'
 import { format, differenceInYears } from 'date-fns'
 import { api } from 'boot/axios'
 import FormularioPrescripcion from 'src/components/FormularioPrescripcion.vue'
-import FormularioAlimentacion from 'src/components/FormularioAlimentacion.vue'
+import AlimentacionForm from 'src/components/AlimentacionForm.vue'
+import AlimentacionPanel from 'src/components/AlimentacionPanel.vue'
 import SignosVitalesDashboard from 'src/components/SignosVitalesDashboard.vue'
 
 export default defineComponent({
   name: 'PanelInternacion',
-  components: { FormularioPrescripcion, FormularioAlimentacion, SignosVitalesDashboard },
+  components: {
+    FormularioPrescripcion,
+    AlimentacionForm,
+    AlimentacionPanel,
+    SignosVitalesDashboard,
+  },
   props: {
     internacionId: {
       type: [String, Number],
@@ -383,33 +394,32 @@ export default defineComponent({
     const mostrarDialogoAlimentacion = ref(false)
     const alimentacionSeleccionada = ref(null)
     const formularioAlimentacionRef = ref(null)
+    const panelAlimentacionRef = ref(null)
 
     const controlesConValores = computed(() => {
-      if (!dashboardData.value || !Array.isArray(dashboardData.value.controls)) {
-        return []
-      }
+      if (!dashboardData.value || !Array.isArray(dashboardData.value.controls)) return []
       return dashboardData.value.controls.filter(
         (c) => c && Array.isArray(c.valores) && c.valores.length > 0,
       )
     })
 
     const notasDeEvolucion = computed(() => {
-      if (!dashboardData.value || !Array.isArray(dashboardData.value.controls)) {
-        return []
-      }
+      if (!dashboardData.value || !Array.isArray(dashboardData.value.controls)) return []
       return dashboardData.value.controls.filter(
-        (c) => c && (!Array.isArray(c.valores) || c.valores.length === 0),
+        (c) => c && c.observaciones && (!Array.isArray(c.valores) || c.valores.length === 0),
       )
     })
 
     const hayTratamientoActivo = computed(() => {
-      if (!dashboardData.value?.tratamientos) return false
-      return dashboardData.value.tratamientos.some((t) => t.estado === 0)
+      return dashboardData.value?.tratamientos?.some((t) => t.estado === 0) || false
     })
 
     const hayAlimentacionActiva = computed(() => {
-      if (!dashboardData.value?.alimentaciones) return false
-      return dashboardData.value.alimentaciones.some((a) => a.estado === 0)
+      return dashboardData.value?.alimentaciones?.some((a) => a.estado === 0) || false
+    })
+
+    const alimentacionesSuspendidas = computed(() => {
+      return dashboardData.value?.alimentaciones?.filter((a) => a.estado !== 0) || []
     })
 
     async function fetchData() {
@@ -436,12 +446,20 @@ export default defineComponent({
 
     function calcularEdad(fechaNacimiento) {
       if (!fechaNacimiento) return 'N/A'
-      return differenceInYears(new Date(), new Date(fechaNacimiento))
+      try {
+        return differenceInYears(new Date(), new Date(fechaNacimiento))
+      } catch {
+        return 'N/A'
+      }
     }
 
     function formatDateTime(dateTimeString) {
       if (!dateTimeString) return 'N/A'
-      return format(new Date(dateTimeString), 'dd/MM/yyyy HH:mm')
+      try {
+        return format(new Date(dateTimeString), 'dd/MM/yyyy HH:mm')
+      } catch {
+        return 'N/A'
+      }
     }
 
     function traducirEstado(estadoNum) {
@@ -454,14 +472,14 @@ export default defineComponent({
       return colores[estadoNum] || 'primary'
     }
 
-    function traducirEstadoAlimentacion(estadoNum) {
-      const estados = { 0: 'Activo', 1: 'Suspendido', 2: 'Finalizado' }
-      return estados[estadoNum] ?? 'Desconocido'
+    function getAlimentacionColorPorEstado(estadoNum) {
+      const colores = { 0: 'positive', 1: 'orange', 2: 'grey', 3: 'red' }
+      return colores[estadoNum] || 'primary'
     }
 
-    function getColorPorEstadoAlimentacion(estadoNum) {
-      const colores = { 0: 'green', 1: 'orange', 2: 'grey' }
-      return colores[estadoNum] ?? 'primary'
+    function getAlimentacionTextoEstado(estadoNum) {
+      const estados = { 0: 'Activa', 1: 'Suspendida', 2: 'Finalizada', 3: 'Cancelada' }
+      return estados[estadoNum] || 'Desconocido'
     }
 
     function abrirDialogoTratamiento() {
@@ -470,84 +488,69 @@ export default defineComponent({
     }
 
     function abrirDialogoEditar(tratamiento) {
-      tratamientoSeleccionado.value = JSON.parse(JSON.stringify(tratamiento))
+      tratamientoSeleccionado.value = { ...tratamiento }
       mostrarDialogoTratamiento.value = true
     }
 
     async function guardarTratamiento() {
-      if (!formularioPrescripcionRef.value) return
-      const { datos, esValido } = await formularioPrescripcionRef.value.validarYObtenerDatos()
-      if (!esValido) {
-        Notify.create({
-          color: 'warning',
-          message: 'Por favor, complete todos los campos requeridos.',
-        })
-        return
-      }
-      Loading.show({ message: 'Guardando...' })
+      const form = formularioPrescripcionRef.value
+      if (!form || !form.validarFormulario()) return
       try {
-        if (tratamientoSeleccionado.value) {
-          await api.post(`/tratamientos/${tratamientoSeleccionado.value.id}`, datos)
-        } else {
-          await api.post('/tratamientos', datos)
-        }
-        Notify.create({ color: 'positive', message: 'Tratamiento guardado con éxito.' })
+        Loading.show()
+        await form.guardarPrescripcion()
         mostrarDialogoTratamiento.value = false
+        Notify.create({ type: 'positive', message: 'Tratamiento guardado correctamente.' })
         await fetchData()
       } catch (err) {
-        const message = err.response?.data?.message || 'Ocurrió un error al guardar.'
-        Notify.create({ color: 'negative', message })
+        Notify.create({
+          type: 'negative',
+          message: err.response?.data?.message || 'Error al guardar el tratamiento.',
+        })
       } finally {
         Loading.hide()
       }
     }
 
-    async function suspenderTratamiento(tratamientoId) {
+    async function suspenderTratamiento(id) {
       Dialog.create({
-        title: 'Suspender Tratamiento Completo',
-        message: 'Ingrese el motivo de la suspensión:',
-        prompt: {
-          model: '',
-          type: 'textarea',
-          isValid: (val) => val.length >= 10 || 'El motivo debe tener al menos 10 caracteres.',
-        },
+        title: 'Confirmar suspensión',
+        message: '¿Desea suspender este tratamiento?',
         cancel: true,
         persistent: true,
-      }).onOk(async (motivo) => {
-        Loading.show({ message: 'Suspendiendo tratamiento...' })
+      }).onOk(async () => {
         try {
-          await api.post(`/tratamientos/${tratamientoId}/suspender`, { motivo })
-          Notify.create({ color: 'positive', message: 'Tratamiento suspendido con éxito.' })
+          Loading.show()
+          await api.put(`/tratamientos/${id}/suspender`)
+          Notify.create({ type: 'positive', message: 'Tratamiento suspendido correctamente.' })
           await fetchData()
         } catch (err) {
-          const errorMessage = err.response?.data?.message || 'Error al suspender el tratamiento.'
-          Notify.create({ color: 'negative', message: errorMessage })
+          Notify.create({
+            type: 'negative',
+            message: err.response?.data?.message || 'Error al suspender tratamiento.',
+          })
         } finally {
           Loading.hide()
         }
       })
     }
 
-    async function suspenderReceta(recetaId) {
+    async function suspenderReceta(id) {
       Dialog.create({
-        title: 'Suspender Medicamento',
-        message: 'Ingrese el motivo de la suspensión:',
-        prompt: {
-          model: '',
-          type: 'textarea',
-          isValid: (val) => val.length >= 10 || 'El motivo debe tener al menos 10 caracteres.',
-        },
+        title: 'Suspender medicamento',
+        message: '¿Desea suspender este medicamento del tratamiento?',
         cancel: true,
         persistent: true,
-      }).onOk(async (motivo) => {
-        Loading.show({ message: 'Suspendiendo medicamento...' })
+      }).onOk(async () => {
         try {
-          await api.post(`/recetas/${recetaId}/suspender`, { motivo })
-          Notify.create({ color: 'positive', message: 'Medicamento suspendido con éxito.' })
+          Loading.show()
+          await api.put(`/recetas/${id}/suspender`)
+          Notify.create({ type: 'positive', message: 'Medicamento suspendido correctamente.' })
           await fetchData()
         } catch (err) {
-          const errorMessage = err.response?.data?.message || 'Error al suspender.'
-          Notify.create({ color: 'negative', message: errorMessage })
+          Notify.create({
+            type: 'negative',
+            message: err.response?.data?.message || 'Error al suspender medicamento.',
+          })
         } finally {
           Loading.hide()
         }
@@ -560,155 +563,108 @@ export default defineComponent({
     }
 
     function abrirDialogoEditarAlimentacion(alimentacion) {
-      alimentacionSeleccionada.value = JSON.parse(JSON.stringify(alimentacion))
+      alimentacionSeleccionada.value = { ...alimentacion }
       mostrarDialogoAlimentacion.value = true
     }
 
-    async function guardarAlimentacion() {
-      if (!formularioAlimentacionRef.value) return
-      const { datos, esValido } = await formularioAlimentacionRef.value.validarYObtenerDatos()
-      if (!esValido) {
-        Notify.create({
-          color: 'warning',
-          message: 'Por favor, complete todos los campos requeridos.',
-        })
-        return
-      }
-      Loading.show({ message: 'Guardando plan...' })
-      try {
-        if (alimentacionSeleccionada.value) {
-          await api.put(`/alimentaciones/${alimentacionSeleccionada.value.id}`, datos)
-        } else {
-          await api.post('/alimentaciones', datos)
-        }
-        Notify.create({ color: 'positive', message: 'Plan de alimentación guardado con éxito.' })
-        mostrarDialogoAlimentacion.value = false
-        await fetchData()
-      } catch (err) {
-        const message = err.response?.data?.message || 'Ocurrió un error al guardar.'
-        Notify.create({ color: 'negative', message })
-      } finally {
-        Loading.hide()
-      }
+    async function handleAlimentacionSaved() {
+      mostrarDialogoAlimentacion.value = false
+      Notify.create({ type: 'positive', message: 'Plan de alimentación guardado correctamente.' })
+      await fetchData()
     }
 
-    async function suspenderAlimentacion(alimentacionId) {
-      Dialog.create({
-        title: 'Suspender Plan de Alimentación',
-        message: 'Ingrese el motivo de la suspensión:',
-        prompt: {
-          model: '',
-          type: 'textarea',
-          isValid: (val) => val.length >= 10 || 'El motivo debe tener al menos 10 caracteres.',
-        },
-        cancel: true,
-        persistent: true,
-      }).onOk(async (motivo) => {
-        Loading.show({ message: 'Suspendiendo...' })
-        try {
-          await api.post(`/alimentaciones/${alimentacionId}/suspender`, { motivo })
-          Notify.create({ color: 'positive', message: 'Plan de alimentación suspendido.' })
-          await fetchData()
-        } catch (err) {
-          const errorMessage = err.response?.data?.message || 'Error al suspender.'
-          Notify.create({ color: 'negative', message: errorMessage })
-        } finally {
-          Loading.hide()
-        }
-      })
+    function abrirDialogoEvolucion() {
+      mostrarDialogoEvolucion.value = true
+    }
+    async function guardarEvolucion() {
+      if (!nuevaObservacion.value.trim()) return
+      try {
+        guardandoEvolucion.value = true
+        await api.post(`/internaciones/${internacionId}/evoluciones`, {
+          observaciones: nuevaObservacion.value,
+        })
+        Notify.create({ type: 'positive', message: 'Nota de evolución registrada correctamente.' })
+        mostrarDialogoEvolucion.value = false
+        nuevaObservacion.value = ''
+        await fetchData()
+      } catch (err) {
+        Notify.create({
+          type: 'negative',
+          message: err.response?.data?.message || 'Error al guardar la evolución.',
+        })
+      } finally {
+        guardandoEvolucion.value = false
+      }
     }
 
     async function darDeAlta() {
       Dialog.create({
-        title: 'Confirmar Alta Médica',
-        message: '¿Está seguro de que desea dar de alta a este paciente?',
+        title: 'Dar de Alta al Paciente',
+        message: '¿Desea finalizar la internación y dar de alta al paciente?',
         cancel: true,
         persistent: true,
       }).onOk(async () => {
-        Loading.show({ message: 'Procesando alta...' })
         try {
-          await api.post(`/internaciones/${internacionId}/dar-de-alta`)
-          Notify.create({ color: 'positive', message: 'Paciente dado de alta con éxito.' })
+          Loading.show()
+          await api.put(`/internaciones/${internacionId}/alta`)
+          Notify.create({ type: 'positive', message: 'Paciente dado de alta correctamente.' })
           await fetchData()
         } catch (err) {
-          const errorMessage = err.response?.data?.message || 'Error al procesar el alta.'
-          Notify.create({ color: 'negative', message: errorMessage })
+          Notify.create({
+            type: 'negative',
+            message: err.response?.data?.message || 'Error al dar de alta al paciente.',
+          })
         } finally {
           Loading.hide()
         }
       })
-    }
-
-    function abrirDialogoEvolucion() {
-      nuevaObservacion.value = ''
-      mostrarDialogoEvolucion.value = true
-    }
-
-    async function guardarEvolucion() {
-      const esValido = await evolucionFormRef.value.validate()
-      if (!esValido) return
-      guardandoEvolucion.value = true
-      try {
-        const payload = {
-          internacion_id: internacionId,
-          observaciones: nuevaObservacion.value,
-          tipo: 'Evolución Médica',
-        }
-        await api.post('/controls', payload)
-        Notify.create({ color: 'positive', message: 'Nota de evolución guardada.' })
-        mostrarDialogoEvolucion.value = false
-        await fetchData()
-      } catch (err) {
-        const message = err.response?.data?.message || 'Error al guardar la nota.'
-        Notify.create({ color: 'negative', message })
-      } finally {
-        guardandoEvolucion.value = false
-      }
     }
 
     return {
       isLoading,
       error,
       dashboardData,
-      catalogoMedicamentos,
-      mostrarDialogoTratamiento,
-      tratamientoSeleccionado,
-      formularioPrescripcionRef,
-      hayTratamientoActivo,
-      mostrarDialogoEvolucion,
-      nuevaObservacion,
-      guardandoEvolucion,
-      evolucionFormRef,
       calcularEdad,
       formatDateTime,
       traducirEstado,
       getColorPorEstado,
+      mostrarDialogoTratamiento,
       abrirDialogoTratamiento,
       abrirDialogoEditar,
       guardarTratamiento,
       suspenderTratamiento,
       suspenderReceta,
-      darDeAlta,
+      tratamientoSeleccionado,
+      formularioPrescripcionRef,
+      mostrarDialogoEvolucion,
       abrirDialogoEvolucion,
+      nuevaObservacion,
       guardarEvolucion,
-      catalogoTiposDieta,
+      guardandoEvolucion,
+      evolucionFormRef,
+      hayTratamientoActivo,
+      hayAlimentacionActiva,
       mostrarDialogoAlimentacion,
-      alimentacionSeleccionada,
-      formularioAlimentacionRef,
       abrirDialogoAlimentacion,
       abrirDialogoEditarAlimentacion,
-      guardarAlimentacion,
-      hayAlimentacionActiva,
-      traducirEstadoAlimentacion,
-      getColorPorEstadoAlimentacion,
-      suspenderAlimentacion,
+      alimentacionSeleccionada,
+      handleAlimentacionSaved,
+      formularioAlimentacionRef,
+      panelAlimentacionRef,
+      catalogoMedicamentos,
+      getAlimentacionColorPorEstado,
+      getAlimentacionTextoEstado,
+      alimentacionesSuspendidas,
       controlesConValores,
       notasDeEvolucion,
+      darDeAlta,
     }
   },
 })
 </script>
 
 <style scoped>
-/* Sin cambios en el CSS */
+.text-strike {
+  text-decoration: line-through;
+}
 </style>
