@@ -11,6 +11,7 @@
         </div>
       </div>
       <q-list class="navigation-menu">
+        <!-- Dashboard (Admin, Médico, Enfermera) -->
         <q-item
           clickable
           v-ripple
@@ -27,6 +28,8 @@
             <q-item-label class="nav-label">Dashboard</q-item-label>
           </q-item-section>
         </q-item>
+
+        <!-- Gestión Hospital -->
         <q-item
           clickable
           v-ripple
@@ -42,6 +45,8 @@
             <q-item-label class="nav-label">Gestión de Hospital</q-item-label>
           </q-item-section>
         </q-item>
+
+        <!-- Admisión -->
         <q-item
           clickable
           v-ripple
@@ -57,6 +62,8 @@
             <q-item-label class="nav-label">Admisión de Pacientes</q-item-label>
           </q-item-section>
         </q-item>
+
+        <!-- Gestión de Pacientes -->
         <q-item
           clickable
           v-ripple
@@ -72,6 +79,8 @@
             <q-item-label class="nav-label">Gestión de Pacientes</q-item-label>
           </q-item-section>
         </q-item>
+
+        <!-- Usuarios y Roles -->
         <q-item
           clickable
           v-ripple
@@ -87,6 +96,8 @@
             <q-item-label class="nav-label">Usuarios y Roles</q-item-label>
           </q-item-section>
         </q-item>
+
+        <!-- Medicamentos -->
         <q-item
           clickable
           v-ripple
@@ -102,6 +113,8 @@
             <q-item-label class="nav-label">Gestión de Farmacia</q-item-label>
           </q-item-section>
         </q-item>
+
+        <!-- Mis Pacientes (Médicos) -->
         <q-item
           clickable
           v-ripple
@@ -117,19 +130,44 @@
             <q-item-label class="nav-label">Mis Pacientes</q-item-label>
           </q-item-section>
         </q-item>
+
+        <!-- Estación de Enfermería (Enfermeras) -->
         <q-item
           clickable
           v-ripple
           to="/estacion-enfermeria"
           class="nav-item"
           active-class="nav-item-active"
-          v-if="userStore.hasPermission('acceso.estacion-enfermeria')"
+          v-if="
+            userStore.hasPermission('acceso.estacion-enfermeria') &&
+            userStore.user?.rol?.nombre !== 'PACIENTE'
+          "
         >
           <q-item-section avatar>
             <q-icon name="local_pharmacy" class="nav-icon" />
           </q-item-section>
           <q-item-section>
             <q-item-label class="nav-label">Estación de Enfermería</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <!-- ✅ Mi Internación (Solo PACIENTES) -->
+        <q-item
+          clickable
+          v-ripple
+          to="/mi-internacion"
+          class="nav-item"
+          active-class="nav-item-active"
+          v-if="
+            userStore.hasPermission('acceso.mi-internacion') &&
+            userStore.user?.rol?.nombre === 'PACIENTE'
+          "
+        >
+          <q-item-section avatar>
+            <q-icon name="healing" class="nav-icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Mi Internación</q-item-label>
           </q-item-section>
         </q-item>
       </q-list>
@@ -153,7 +191,6 @@
           <span class="title-text">Dashboard Principal</span>
         </q-toolbar-title>
         <div class="header-actions">
-          <!-- Added NotificationBell component for doctors -->
           <NotificationBell v-if="userStore.hasPermission('acceso.mis-pacientes')" />
 
           <q-btn flat round dense icon="account_circle" class="action-btn profile-btn">
@@ -254,7 +291,6 @@ const cerrarSesion = async () => {
 
 const drawer = ref(true)
 </script>
-
 <style scoped>
 .main-layout {
   background: #f8fafc;

@@ -65,6 +65,7 @@
       </q-table>
     </div>
 
+    <!-- ✅ DIÁLOGO CON CAMPOS DE REFERENCIA -->
     <q-dialog v-model="pacienteDialog" persistent @hide="resetForm">
       <q-card class="dialog-card scrollable-dialog">
         <q-form ref="pacienteFormRef" @submit.prevent="savePaciente">
@@ -75,6 +76,9 @@
           </q-card-section>
 
           <q-card-section class="dialog-content">
+            <!-- DATOS DEL PACIENTE -->
+            <div class="section-title">Datos del Paciente</div>
+
             <div class="row q-col-gutter-md">
               <div class="col-12 col-sm-6">
                 <q-input
@@ -106,6 +110,7 @@
                 />
               </div>
             </div>
+
             <div class="row q-col-gutter-md">
               <div class="col-12 col-sm-6">
                 <q-input
@@ -136,18 +141,20 @@
                 />
               </div>
             </div>
+
             <div class="row q-col-gutter-md">
               <div class="col-12 col-sm-6">
                 <q-input
                   v-model="pacienteForm.telefono"
-                  label="Teléfono/Celular"
+                  label="Teléfono/Celular *"
                   outlined
                   dense
                   class="input-field"
                   lazy-rules
                   mask="########"
                   :rules="[
-                    (v) => !v || /^[67]\d{7}$/.test(v) || 'Teléfono de Bolivia (empieza con 6 o 7)',
+                    (v) => !!v || 'El teléfono es requerido',
+                    (v) => /^[67]\d{7}$/.test(v) || 'Teléfono de Bolivia (empieza con 6 o 7)',
                   ]"
                 />
               </div>
@@ -165,6 +172,7 @@
                 />
               </div>
             </div>
+
             <div class="row q-col-gutter-md">
               <div class="col-12">
                 <q-input
@@ -176,6 +184,53 @@
                   lazy-rules
                   type="textarea"
                   :rules="[(v) => !!v || 'La dirección es requerida']"
+                />
+              </div>
+            </div>
+
+            <!-- ✅ NUEVA SECCIÓN: CONTACTO DE REFERENCIA -->
+            <q-separator class="q-my-md" />
+            <div class="section-title">Contacto de Referencia (Opcional)</div>
+
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-4">
+                <q-input
+                  v-model="pacienteForm.nombre_referencia"
+                  label="Nombre"
+                  outlined
+                  dense
+                  class="input-field"
+                  lazy-rules
+                  :rules="[
+                    (v) => !v || /^[\p{L}\s]+$/u.test(v) || 'Solo se permiten letras y espacios',
+                  ]"
+                />
+              </div>
+              <div class="col-12 col-sm-4">
+                <q-input
+                  v-model="pacienteForm.apellidos_referencia"
+                  label="Apellidos"
+                  outlined
+                  dense
+                  class="input-field"
+                  lazy-rules
+                  :rules="[
+                    (v) => !v || /^[\p{L}\s]+$/u.test(v) || 'Solo se permiten letras y espacios',
+                  ]"
+                />
+              </div>
+              <div class="col-12 col-sm-4">
+                <q-input
+                  v-model="pacienteForm.celular_referencia"
+                  label="Celular"
+                  outlined
+                  dense
+                  class="input-field"
+                  mask="########"
+                  lazy-rules
+                  :rules="[
+                    (v) => !v || /^[67]\d{7}$/.test(v) || 'Celular de Bolivia (empieza con 6 o 7)',
+                  ]"
                 />
               </div>
             </div>
@@ -193,6 +248,38 @@
         </q-form>
       </q-card>
     </q-dialog>
+
+    <!-- ✅ DIÁLOGO DE CREDENCIALES (muestra usuario/contraseña generados) -->
+    <q-dialog v-model="credencialesDialog" persistent>
+      <q-card class="credenciales-card">
+        <q-card-section class="dialog-header">
+          <div class="dialog-title">✅ Paciente Registrado</div>
+        </q-card-section>
+
+        <q-card-section class="text-center q-pa-lg">
+          <q-icon name="check_circle" size="64px" color="positive" class="q-mb-md" />
+          <div class="text-h6 q-mb-md">Usuario creado exitosamente</div>
+          <div class="credenciales-info">
+            <div class="credencial-item">
+              <strong>Usuario:</strong> {{ credencialesGeneradas.email }}
+            </div>
+            <div class="credencial-item">
+              <strong>Contraseña:</strong> {{ credencialesGeneradas.password }}
+            </div>
+          </div>
+          <q-banner class="bg-warning text-white q-mt-md" rounded>
+            <template v-slot:avatar>
+              <q-icon name="info" />
+            </template>
+            Guarda estas credenciales. Se recomienda que el paciente cambie su contraseña.
+          </q-banner>
+        </q-card-section>
+
+        <q-card-actions align="center">
+          <q-btn label="Entendido" color="primary" @click="cerrarCredenciales" class="q-px-xl" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -200,20 +287,24 @@
 import { ref, onMounted } from 'vue'
 import { api } from 'boot/axios'
 import { useQuasar } from 'quasar'
-import { useRouter } from 'vue-router' // ✅ Importar el router
+import { useRouter } from 'vue-router'
 
 const $q = useQuasar()
-const router = useRouter() // ✅ Instanciar el router
+const router = useRouter()
 
-// --- Estado del Componente ---
 const pacientes = ref([])
 const filter = ref('')
 const loadingTable = ref(false)
 const pacienteDialog = ref(false)
+const credencialesDialog = ref(false)
 const isSaving = ref(false)
 const pacienteFormRef = ref(null)
 
-// ✅ CORREGIDO: Opciones del formulario movidas a un 'ref' para evitar falsos positivos de ESLint.
+const credencialesGeneradas = ref({
+  email: '',
+  password: '',
+})
+
 const formOptions = ref({
   genero: [
     { label: 'Masculino', value: 'masculino' },
@@ -230,6 +321,9 @@ const initialFormState = {
   telefono: '',
   fecha_nacimiento: '',
   direccion: '',
+  nombre_referencia: '',
+  apellidos_referencia: '',
+  celular_referencia: '',
   estado: true,
 }
 const pacienteForm = ref({ ...initialFormState })
@@ -249,11 +343,10 @@ const pacienteColumns = [
   { name: 'actions', label: 'Acciones', field: 'actions', align: 'center' },
 ]
 
-// --- Lógica de API ---
 const fetchPacientes = async () => {
   loadingTable.value = true
   try {
-    const response = await api.get('/pacientes') // Asegúrate que la ruta inicie con /api/
+    const response = await api.get('/pacientes')
     pacientes.value = response.data
   } catch (error) {
     console.error('Error al cargar pacientes:', error)
@@ -263,7 +356,6 @@ const fetchPacientes = async () => {
   }
 }
 
-// ✅ AÑADIDO: La función que nos llevará al panel del paciente
 const irAPanel = (internacionId) => {
   router.push({
     name: 'PanelInternacion',
@@ -271,7 +363,6 @@ const irAPanel = (internacionId) => {
   })
 }
 
-// --- Lógica de Formularios y Diálogos ---
 const resetForm = () => {
   pacienteForm.value = { ...initialFormState }
   pacienteFormRef.value?.resetValidation()
@@ -297,15 +388,22 @@ const savePaciente = async () => {
 
   try {
     if (payload.id) {
+      // Actualización
       await api.put(`/pacientes/${payload.id}`, payload)
       $q.notify({ type: 'positive', message: 'Paciente actualizado con éxito.' })
+      pacienteDialog.value = false
     } else {
+      // ✅ Nuevo paciente: recibir credenciales
       payload.estado = true
       delete payload.id
-      await api.post('/pacientes', payload)
-      $q.notify({ type: 'positive', message: 'Paciente registrado con éxito.' })
+      const response = await api.post('/pacientes', payload)
+
+      // Mostrar credenciales generadas
+      credencialesGeneradas.value = response.data.credenciales
+      pacienteDialog.value = false
+      credencialesDialog.value = true
     }
-    pacienteDialog.value = false
+
     await fetchPacientes()
   } catch (error) {
     console.error('Error al guardar paciente:', error)
@@ -328,11 +426,15 @@ const savePaciente = async () => {
   }
 }
 
+const cerrarCredenciales = () => {
+  credencialesDialog.value = false
+  credencialesGeneradas.value = { email: '', password: '' }
+}
+
 onMounted(fetchPacientes)
 </script>
 
 <style scoped>
-/* Estos estilos son una base sólida que puedes reutilizar */
 .pacientes-container {
   padding: 24px;
   background: #f8fafc;
@@ -378,14 +480,17 @@ onMounted(fetchPacientes)
   color: #475569;
 }
 
+.action-btn-view {
+  color: #3b82f6;
+}
+
 .action-btn-edit {
   color: #14b8a6;
 }
 
-/* Estilos para diálogos (modales) */
 .dialog-card {
   width: 90vw;
-  max-width: 800px; /* Ancho ajustado para más campos */
+  max-width: 900px;
   border-radius: 16px;
 }
 
@@ -411,6 +516,15 @@ onMounted(fetchPacientes)
   font-weight: 700;
 }
 
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
 .dialog-content {
   padding: 24px;
 }
@@ -432,10 +546,31 @@ onMounted(fetchPacientes)
   font-weight: 600;
   padding: 8px 24px;
 }
-.action-btn-view {
-  color: #3b82f6; /* Un color azul para diferenciarlo del de editar */
+
+/* Estilos para el diálogo de credenciales */
+.credenciales-card {
+  width: 500px;
+  max-width: 90vw;
+  border-radius: 16px;
 }
-.action-btn-edit {
-  color: #14b8a6;
+
+.credenciales-info {
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 16px 0;
+}
+
+.credencial-item {
+  padding: 12px;
+  margin: 8px 0;
+  background: white;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.credencial-item strong {
+  color: #475569;
+  margin-right: 8px;
 }
 </style>

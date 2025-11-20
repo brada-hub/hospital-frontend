@@ -67,6 +67,12 @@ const routes = [
         component: () => import('pages/EstacionEnfermeriaPage.vue'),
         meta: { permission: 'acceso.estacion-enfermeria' },
       },
+      {
+        path: 'mi-internacion',
+        name: 'MiInternacion',
+        component: () => import('pages/MiInternacionPage.vue'), // ← Componente diferente
+        meta: { permission: 'acceso.mi-internacion' },
+      },
     ],
   },
   {

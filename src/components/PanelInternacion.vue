@@ -89,13 +89,6 @@
               @click="descargarEvolucionClinica"
               unelevated
             />
-            <q-btn
-              color="teal"
-              icon="bar_chart"
-              label="Estadísticas"
-              @click="descargarEstadisticas"
-              outline
-            />
           </div>
         </q-card-section>
       </q-card>
@@ -518,12 +511,30 @@ export default defineComponent({
 
     async function guardarTratamiento() {
       const form = formularioPrescripcionRef.value
-      if (!form || !form.validarFormulario()) return
+      if (!form) return
+
+      const resultado = await form.validarYObtenerDatos()
+
+      if (!resultado.esValido) {
+        return
+      }
+
       try {
-        Loading.show()
-        await form.guardarPrescripcion()
+        Loading.show({ message: 'Guardando tratamiento...' })
+
+        if (tratamientoSeleccionado.value && tratamientoSeleccionado.value.id) {
+          // Editar tratamiento existente
+          await api.put(`/tratamientos/${tratamientoSeleccionado.value.id}`, resultado.datos)
+        } else {
+          // Crear nuevo tratamiento
+          await api.post('/tratamientos', resultado.datos)
+        }
+
         mostrarDialogoTratamiento.value = false
-        Notify.create({ type: 'positive', message: 'Tratamiento guardado correctamente.' })
+        Notify.create({
+          type: 'positive',
+          message: 'Tratamiento guardado correctamente.',
+        })
         await fetchData()
       } catch (err) {
         Notify.create({
@@ -600,11 +611,15 @@ export default defineComponent({
     function abrirDialogoEvolucion() {
       mostrarDialogoEvolucion.value = true
     }
+
     async function guardarEvolucion() {
       if (!nuevaObservacion.value.trim()) return
       try {
         guardandoEvolucion.value = true
-        await api.post(`/internaciones/${internacionId}/evoluciones`, {
+        await api.post('/controls', {
+          internacion_id: internacionId,
+          tipo: 'Evolución Médica',
+          fecha_control: new Date().toISOString(),
           observaciones: nuevaObservacion.value,
         })
         Notify.create({ type: 'positive', message: 'Nota de evolución registrada correctamente.' })
@@ -720,40 +735,6 @@ export default defineComponent({
       }
     }
 
-    async function descargarEstadisticas() {
-      try {
-        Loading.show({ message: 'Generando estadísticas en PDF...' })
-        const response = await api.post(
-          `/reportes/estadisticas`,
-          { internacion_id: internacionId },
-          { responseType: 'blob' },
-        )
-
-        const url = window.URL.createObjectURL(new Blob([response.data]))
-        const link = document.createElement('a')
-        link.href = url
-        const fileName = `Estadisticas_${dashboardData.value.paciente.apellidos}_${dashboardData.value.paciente.ci}_${format(new Date(), 'ddMMyyyy')}.pdf`
-        link.setAttribute('download', fileName)
-        document.body.appendChild(link)
-        link.click()
-        link.remove()
-        window.URL.revokeObjectURL(url)
-
-        Notify.create({
-          type: 'positive',
-          message: 'Estadísticas descargadas correctamente.',
-          icon: 'check_circle',
-        })
-      } catch (err) {
-        Notify.create({
-          type: 'negative',
-          message: err.response?.data?.message || 'Error al descargar las estadísticas.',
-        })
-      } finally {
-        Loading.hide()
-      }
-    }
-
     return {
       isLoading,
       error,
@@ -794,7 +775,6 @@ export default defineComponent({
       darDeAlta,
       descargarEpicrisis,
       descargarEvolucionClinica,
-      descargarEstadisticas,
     }
   },
 })
