@@ -187,7 +187,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { format } from 'date-fns'
@@ -195,7 +195,7 @@ import { es } from 'date-fns/locale'
 
 const props = defineProps({
   internacionId: { type: Number, required: true },
-  tratamientoId: { type: Number, required: true },
+  tratamientoId: { type: Number, default: null },
 })
 
 const $q = useQuasar()
@@ -204,6 +204,8 @@ const alimentacion = ref(null)
 const guardandoTiempo = ref(null)
 const inputsNuevos = ref({})
 const historialConsumos = ref([])
+// <CHANGE> Add reference to the actual treatment ID to use for API calls
+const tratamientoIdActual = ref(props.tratamientoId)
 
 const getFechaHoy = () => format(new Date(), 'yyyy-MM-dd')
 
@@ -263,22 +265,75 @@ const getConsumosPorTiempo = (tiempoComida) => {
   return historialConsumos.value.filter((c) => c.tiempo_comida === tiempoComida)
 }
 
-onMounted(() => cargarDatosAlimentacion())
+// <CHANGE> Watch for treatment ID changes and load treatment data if not provided
+watch(
+  () => props.tratamientoId,
+  (newId) => {
+    if (newId) {
+      tratamientoIdActual.value = newId
+      cargarDatosAlimentacion()
+    } else {
+      // If no treatment ID, try to load treatments for this patient
+      cargarTratamientosYAlimentacion()
+    }
+  },
+)
+
+onMounted(() => {
+  if (props.tratamientoId) {
+    cargarDatosAlimentacion()
+  } else {
+    cargarTratamientosYAlimentacion()
+  }
+})
+
+// <CHANGE> New function to load treatments first if not provided
+const cargarTratamientosYAlimentacion = async () => {
+  cargando.value = true
+  console.log('[PanelAlimentacion] No treatment ID provided, loading treatments...')
+  try {
+    const response = await api.get(`/internaciones/${props.internacionId}`)
+    const internacion = response.data
+    if (internacion.tratamientos && internacion.tratamientos.length > 0) {
+      tratamientoIdActual.value = internacion.tratamientos[0].id
+      console.log('[PanelAlimentacion] Treatment loaded:', tratamientoIdActual.value)
+      await cargarDatosAlimentacion()
+    } else {
+      console.warn('[PanelAlimentacion] No treatments found for this patient')
+      cargando.value = false
+    }
+  } catch (error) {
+    console.error('[PanelAlimentacion] Error loading treatments:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar los tratamientos del paciente',
+    })
+    cargando.value = false
+  }
+}
 
 const cargarDatosAlimentacion = async () => {
   cargando.value = true
   historialConsumos.value = []
   inputsNuevos.value = {}
 
+  console.log('[PanelAlimentacion] Loading food plan...')
+  console.log('  internacionId:', props.internacionId)
+  console.log('  tratamientoId:', tratamientoIdActual.value)
+
   try {
     const responseDieta = await api.get(`/alimentaciones/internacion/${props.internacionId}`)
+    console.log('  Food plan response:', responseDieta.data)
     const dietaActiva = responseDieta.data.find((a) => a.estado === 0)
 
     if (!dietaActiva) {
+      console.warn('  No active food plan found')
       alimentacion.value = null
       return
     }
 
+    console.log('  Active food plan found:', dietaActiva)
+    console.log('  Meal times:', dietaActiva.tiempos)
     alimentacion.value = dietaActiva
     const fechaHoy = getFechaHoy()
 
@@ -288,28 +343,38 @@ const cargarDatosAlimentacion = async () => {
         observaciones: '',
       }
     }
+    console.log('  Inputs initialized:', inputsNuevos.value)
 
     try {
       const responseConsumos = await api.get(`/consumos/alimentacion/${dietaActiva.id}/${fechaHoy}`)
       historialConsumos.value = responseConsumos.data || []
+      console.log('  Consumptions loaded:', historialConsumos.value.length)
     } catch (loadError) {
-      console.warn('No se pudieron cargar consumos previos:', loadError.message)
+      console.warn('Could not load previous consumptions:', loadError.message)
     }
   } catch (error) {
     $q.notify({ type: 'negative', message: 'Error al cargar el plan de alimentación' })
-    console.error('Error:', error)
+    console.error('Error loading food plan:', error)
   } finally {
     cargando.value = false
   }
 }
 
 const handleGuardarTiempo = async (tiempoComida) => {
+  if (!tratamientoIdActual.value) {
+    $q.notify({
+      type: 'warning',
+      message: 'No hay un tratamiento disponible para registrar',
+    })
+    return
+  }
+
   guardandoTiempo.value = tiempoComida
   const dataTiempo = inputsNuevos.value[tiempoComida]
   if (!dataTiempo) return
 
   const payload = {
-    tratamiento_id: props.tratamientoId,
+    tratamiento_id: tratamientoIdActual.value,
     alimentacion_id: alimentacion.value.id,
     fecha: getFechaHoy(),
     tiempo_comida: tiempoComida,
@@ -328,7 +393,7 @@ const handleGuardarTiempo = async (tiempoComida) => {
       icon: 'check_circle',
     })
   } catch (error) {
-    console.error(`Error al guardar ${tiempoComida}`, error)
+    console.error(`Error saving ${tiempoComida}`, error)
     $q.notify({ type: 'negative', message: `Error al guardar ${tiempoComida}` })
   } finally {
     guardandoTiempo.value = null

@@ -62,7 +62,6 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
 import { format } from 'date-fns'
 
 const { evoluciones } = defineProps({

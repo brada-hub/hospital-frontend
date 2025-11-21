@@ -111,7 +111,6 @@
 
 <script setup>
 import { ref, reactive, watch } from 'vue'
-import { defineEmits } from 'vue'
 
 const emit = defineEmits(['update:cuidados'])
 

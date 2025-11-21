@@ -76,7 +76,6 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue'
 import { api } from 'boot/axios'
 import { Notify, Dialog } from 'quasar'
 import { format } from 'date-fns'

@@ -139,7 +139,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref, onBeforeUnmount } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
 import { api } from 'boot/axios'
 import { Notify, Dialog } from 'quasar'
 import {

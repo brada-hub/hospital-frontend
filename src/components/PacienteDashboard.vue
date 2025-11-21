@@ -140,7 +140,7 @@
 
 <script setup>
 // ****** AÑADIR/MODIFICAR ESTO ******
-import { ref, defineProps, defineEmits, computed } from 'vue'
+import { ref, computed } from 'vue'
 // ****** FIN DE MODIFICACIÓN ******
 
 import { api } from 'boot/axios'

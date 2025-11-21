@@ -55,10 +55,10 @@
                 <q-icon name="hotel" size="20px" class="info-icon" />
                 <div class="info-content">
                   <span class="info-label">Cama</span>
-                 <span class="info-value" v-if="internacion.ocupacion_activa">
-  {{ internacion.ocupacion_activa.cama.sala.nombre }} -
-  {{ internacion.ocupacion_activa.cama.nombre }}
-</span>
+                  <span class="info-value" v-if="internacion.ocupacion_activa">
+                    {{ internacion.ocupacion_activa.cama.sala.nombre }} -
+                    {{ internacion.ocupacion_activa.cama.nombre }}
+                  </span>
                   <span class="info-value" v-else>No asignada</span>
                 </div>
               </div>

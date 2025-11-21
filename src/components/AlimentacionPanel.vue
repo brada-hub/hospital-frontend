@@ -172,7 +172,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, defineEmits, defineExpose } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { format } from 'date-fns'
