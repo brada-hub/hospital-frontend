@@ -1,28 +1,36 @@
 <template>
-  <q-page padding>
-    <div v-if="isLoading" class="text-center q-pa-xl">
-      <q-spinner-cube color="primary" size="xl" />
-      <div class="q-mt-md text-h6">Cargando datos clínicos...</div>
+  <q-page padding class="panel-internacion-page">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="loading-container">
+      <q-spinner-dots color="teal" size="60px" />
+      <div class="loading-text">Cargando datos clínicos...</div>
     </div>
 
-    <div v-else-if="error" class="text-center q-pa-xl">
-      <q-icon name="error" color="negative" size="xl" />
-      <div class="q-mt-md text-h6 text-negative">Error al cargar los datos</div>
-      <p>{{ error }}</p>
+    <!-- Error State -->
+    <div v-else-if="error" class="error-container">
+      <q-icon name="error" color="negative" size="80px" />
+      <div class="error-title">Error al cargar los datos</div>
+      <p class="error-message">{{ error }}</p>
     </div>
 
-    <div v-else-if="dashboardData">
-      <!-- Información del paciente -->
-      <q-card flat bordered class="q-mb-md">
-        <q-card-section class="row items-center justify-between">
-          <div>
-            <div class="text-h5">
-              {{ dashboardData.paciente.nombre }}
-              {{ dashboardData.paciente.apellidos }}
+    <!-- Main Content -->
+    <div v-else-if="dashboardData" class="content-wrapper">
+      <!-- Card de Información del Paciente -->
+      <q-card flat bordered class="patient-info-card">
+        <q-card-section class="patient-header">
+          <div class="patient-details">
+            <div class="patient-name">
+              {{ dashboardData.paciente.nombre }} {{ dashboardData.paciente.apellidos }}
             </div>
-            <div class="text-subtitle1 text-grey-8">
-              C.I: {{ dashboardData.paciente.ci }} | Edad:
-              {{ calcularEdad(dashboardData.paciente.fecha_nacimiento) }} años
+            <div class="patient-meta">
+              <span class="meta-item">
+                <q-icon name="fingerprint" size="18px" />
+                C.I: {{ dashboardData.paciente.ci }}
+              </span>
+              <span class="meta-item">
+                <q-icon name="cake" size="18px" />
+                {{ calcularEdad(dashboardData.paciente.fecha_nacimiento) }} años
+              </span>
             </div>
 
             <q-badge
@@ -30,8 +38,8 @@
               color="positive"
               text-color="white"
               label="Internado"
-              icon="maps_home_work"
-              class="q-mt-sm"
+              icon="local_hospital"
+              class="status-badge"
             />
             <q-badge
               v-else
@@ -39,68 +47,84 @@
               text-color="white"
               :label="`De Alta - ${formatDateTime(dashboardData.fecha_alta)}`"
               icon="check_circle"
-              class="q-mt-sm"
+              class="status-badge"
             />
           </div>
 
-          <div v-if="!dashboardData.fecha_alta">
-            <q-btn
-              v-if="!hayTratamientoActivo"
-              color="primary"
-              icon="add"
-              label="Nuevo Tratamiento"
-              @click="abrirDialogoTratamiento"
-              class="q-mr-sm"
-            />
+          <div class="action-buttons">
+            <template v-if="!dashboardData.fecha_alta">
+              <q-btn
+                v-if="!hayTratamientoActivo"
+                unelevated
+                rounded
+                color="primary"
+                icon="add"
+                label="Nuevo Tratamiento"
+                @click="abrirDialogoTratamiento"
+                class="action-btn"
+              />
 
-            <q-btn
-              color="teal"
-              icon="restaurant_menu"
-              label="Prescribir Dieta"
-              @click="abrirDialogoAlimentacion"
-              class="q-mr-sm"
-              :disable="hayAlimentacionActiva"
-            >
-              <q-tooltip v-if="hayAlimentacionActiva" class="bg-grey-8" :offset="[0, 5]">
-                Suspenda la dieta activa para agregar una nueva.
-              </q-tooltip>
-            </q-btn>
+              <q-btn
+                unelevated
+                rounded
+                color="teal"
+                icon="restaurant_menu"
+                label="Prescribir Dieta"
+                @click="abrirDialogoAlimentacion"
+                :disable="hayAlimentacionActiva"
+                class="action-btn"
+              >
+                <q-tooltip v-if="hayAlimentacionActiva">
+                  Suspenda la dieta activa para agregar una nueva.
+                </q-tooltip>
+              </q-btn>
 
-            <q-btn
-              color="negative"
-              icon="medical_services"
-              label="Dar de Alta"
-              @click="darDeAlta"
-            />
-          </div>
+              <q-btn
+                unelevated
+                rounded
+                color="negative"
+                icon="medical_services"
+                label="Dar de Alta"
+                @click="darDeAlta"
+                class="action-btn"
+              />
+            </template>
 
-          <div v-else class="q-gutter-sm">
-            <q-btn
-              color="primary"
-              icon="picture_as_pdf"
-              label="Descargar Epicrisis"
-              @click="descargarEpicrisis"
-              unelevated
-            />
-            <q-btn
-              color="secondary"
-              icon="description"
-              label="Evolución Clínica"
-              @click="descargarEvolucionClinica"
-              unelevated
-            />
+            <template v-else>
+              <q-btn
+                unelevated
+                rounded
+                color="primary"
+                icon="picture_as_pdf"
+                label="Descargar Epicrisis"
+                @click="descargarEpicrisis"
+                class="action-btn"
+              />
+              <q-btn
+                unelevated
+                rounded
+                color="secondary"
+                icon="description"
+                label="Evolución Clínica"
+                @click="descargarEvolucionClinica"
+                class="action-btn"
+              />
+            </template>
           </div>
         </q-card-section>
       </q-card>
 
       <!-- Tratamientos -->
-      <div class="text-h6 q-my-md">Tratamientos</div>
+      <div class="section-header">
+        <q-icon name="medication" size="28px" color="teal" />
+        <span>Tratamientos</span>
+      </div>
 
       <div
         v-if="!dashboardData.tratamientos || !dashboardData.tratamientos.length"
-        class="text-center text-grey-7 q-pa-lg"
+        class="empty-state"
       >
-        <q-icon name="medication" size="lg" />
+        <q-icon name="medication" size="80px" color="grey-5" />
         <p>No hay tratamientos prescritos.</p>
       </div>
 
@@ -109,17 +133,17 @@
         :key="tratamiento.id"
         flat
         bordered
-        class="q-mb-md"
+        class="treatment-card"
       >
-        <q-card-section class="bg-grey-2 row items-center justify-between">
-          <div class="text-subtitle1 text-weight-bold">{{ tratamiento.tipo }}</div>
-          <div>
+        <q-card-section class="treatment-header">
+          <div class="treatment-title">{{ tratamiento.tipo }}</div>
+          <div class="treatment-actions">
             <q-badge
               :color="getColorPorEstado(tratamiento.estado)"
               :label="traducirEstado(tratamiento.estado)"
-              class="text-capitalize"
+              class="status-badge-small"
             />
-            <q-btn flat round icon="more_vert" v-if="!dashboardData.fecha_alta">
+            <q-btn flat round dense icon="more_vert" v-if="!dashboardData.fecha_alta">
               <q-menu>
                 <q-list dense>
                   <q-item
@@ -128,7 +152,7 @@
                     @click="abrirDialogoEditar(tratamiento)"
                     :disable="tratamiento.estado !== 0"
                   >
-                    <q-item-section avatar><q-icon name="edit" /></q-item-section>
+                    <q-item-section avatar><q-icon name="edit" color="teal" /></q-item-section>
                     <q-item-section>Modificar</q-item-section>
                   </q-item>
                   <q-item
@@ -138,9 +162,9 @@
                     :disable="tratamiento.estado !== 0"
                   >
                     <q-item-section avatar>
-                      <q-icon name="pause_circle_outline" color="deep-orange" />
+                      <q-icon name="pause_circle_outline" color="orange" />
                     </q-item-section>
-                    <q-item-section>Suspender Tratamiento Completo</q-item-section>
+                    <q-item-section>Suspender Tratamiento</q-item-section>
                   </q-item>
                 </q-list>
               </q-menu>
@@ -155,11 +179,16 @@
             {{ tratamiento.medico.apellidos }}
           </p>
 
-          <q-list bordered separator v-if="tratamiento.recetas && tratamiento.recetas.length > 0">
+          <q-list
+            bordered
+            separator
+            v-if="tratamiento.recetas && tratamiento.recetas.length > 0"
+            class="medications-list"
+          >
             <q-item-label header>Medicamentos</q-item-label>
             <q-item v-for="receta in tratamiento.recetas" :key="receta.id">
               <q-item-section>
-                <q-item-label class="text-weight-medium">
+                <q-item-label class="medication-name">
                   {{ receta.medicamento.nombre }}
                   <q-badge
                     v-if="receta.estado === 1"
@@ -174,8 +203,8 @@
                 </q-item-label>
               </q-item-section>
               <q-item-section side>
-                <q-btn flat round icon="more_vert" size="sm" v-if="!dashboardData.fecha_alta">
-                  <q-menu anchor="bottom right" self="top right">
+                <q-btn flat round dense icon="more_vert" v-if="!dashboardData.fecha_alta">
+                  <q-menu>
                     <q-list dense>
                       <q-item
                         clickable
@@ -183,7 +212,7 @@
                         @click="suspenderReceta(receta.id)"
                         :disable="receta.estado !== 0"
                       >
-                        <q-item-section avatar style="min-width: 40px">
+                        <q-item-section avatar>
                           <q-icon name="pause_circle" color="orange" />
                         </q-item-section>
                         <q-item-section>Suspender Medicamento</q-item-section>
@@ -198,13 +227,16 @@
       </q-card>
 
       <!-- Alimentación -->
-      <div class="text-h6 q-my-md">Planes de Alimentación</div>
+      <div class="section-header">
+        <q-icon name="restaurant" size="28px" color="teal" />
+        <span>Planes de Alimentación</span>
+      </div>
 
       <div
         v-if="!dashboardData.alimentaciones || !dashboardData.alimentaciones.length"
-        class="text-center text-grey-7 q-pa-lg"
+        class="empty-state"
       >
-        <q-icon name="restaurant_off" size="lg" />
+        <q-icon name="restaurant_off" size="80px" color="grey-5" />
         <p>No hay planes de alimentación prescritos.</p>
       </div>
 
@@ -221,19 +253,17 @@
         :key="alimentacion.id"
         flat
         bordered
-        class="q-mb-md"
+        class="alimentacion-card"
       >
-        <q-card-section class="bg-grey-2 row items-center justify-between">
-          <div class="text-subtitle1 text-weight-bold">
+        <q-card-section class="alimentacion-header">
+          <div class="alimentacion-title">
             {{ alimentacion.tipo_dieta?.nombre || 'Dieta sin nombre' }}
           </div>
-          <div>
-            <q-badge
-              :color="getAlimentacionColorPorEstado(alimentacion.estado)"
-              :label="getAlimentacionTextoEstado(alimentacion.estado)"
-              class="text-capitalize"
-            />
-          </div>
+          <q-badge
+            :color="getAlimentacionColorPorEstado(alimentacion.estado)"
+            :label="getAlimentacionTextoEstado(alimentacion.estado)"
+            class="status-badge-small"
+          />
         </q-card-section>
         <q-card-section>
           <p><strong>Vía:</strong> {{ alimentacion.via_administracion }}</p>
@@ -243,11 +273,12 @@
             separator
             dense
             v-if="alimentacion.tiempos && alimentacion.tiempos.length > 0"
+            class="tiempos-list"
           >
             <q-item-label header dense>Tiempos de Comida</q-item-label>
             <q-item v-for="tiempo in alimentacion.tiempos" :key="tiempo.id" dense>
               <q-item-section>
-                <q-item-label class="text-weight-medium">{{ tiempo.tiempo_comida }}</q-item-label>
+                <q-item-label class="tiempo-name">{{ tiempo.tiempo_comida }}</q-item-label>
                 <q-item-label caption>{{ tiempo.descripcion || 'Sin detalle' }}</q-item-label>
               </q-item-section>
             </q-item>
@@ -255,27 +286,28 @@
         </q-card-section>
       </q-card>
 
-      <q-separator class="q-my-lg" />
+      <q-separator class="section-separator" />
 
       <!-- Evolución y Signos Vitales -->
-      <div class="text-h6 q-my-md">Monitor de Signos Vitales y Evolución</div>
+      <div class="section-header">
+        <q-icon name="analytics" size="28px" color="teal" />
+        <span>Monitor de Signos Vitales y Evolución</span>
+      </div>
 
-      <div class="q-mb-md" v-if="!dashboardData.fecha_alta">
+      <div class="evolution-actions" v-if="!dashboardData.fecha_alta">
         <q-btn
+          unelevated
+          rounded
           color="secondary"
           icon="note_add"
           label="Añadir Nota de Evolución"
           @click="abrirDialogoEvolucion"
-          unelevated
         />
       </div>
 
-      <div
-        v-if="!dashboardData.controls || !dashboardData.controls.length"
-        class="text-center text-grey-7 q-pa-xl"
-      >
-        <q-icon name="analytics" size="xl" />
-        <p class="q-mt-md">No hay notas de evolución o controles de signos vitales registrados.</p>
+      <div v-if="!dashboardData.controls || !dashboardData.controls.length" class="empty-state">
+        <q-icon name="analytics" size="80px" color="grey-5" />
+        <p>No hay notas de evolución o controles de signos vitales registrados.</p>
       </div>
 
       <SignosVitalesDashboard
@@ -283,33 +315,40 @@
         :controls="controlesConValores"
       />
 
-      <div class="q-mt-xl" v-if="notasDeEvolucion.length > 0">
-        <div class="text-subtitle1 text-weight-medium">Notas de Evolución Médica</div>
-        <q-card v-for="control in notasDeEvolucion" :key="control.id" flat bordered class="q-mb-md">
-          <q-card-section class="bg-grey-2 row items-center justify-between">
-            <div class="text-weight-bold">{{ formatDateTime(control.fecha_control) }}</div>
-            <div class="text-grey-8" v-if="control.user">
+      <div class="evolution-notes" v-if="notasDeEvolucion.length > 0">
+        <div class="notes-title">Notas de Evolución Médica</div>
+        <q-card
+          v-for="control in notasDeEvolucion"
+          :key="control.id"
+          flat
+          bordered
+          class="note-card"
+        >
+          <q-card-section class="note-header">
+            <div class="note-date">{{ formatDateTime(control.fecha_control) }}</div>
+            <div class="note-author" v-if="control.user">
               Por: {{ control.user.nombre }} {{ control.user.apellidos }}
             </div>
           </q-card-section>
-          <q-card-section style="white-space: pre-wrap">
+          <q-card-section class="note-content">
             {{ control.observaciones }}
           </q-card-section>
         </q-card>
       </div>
 
-      <!-- Diálogo: Nuevo Tratamiento -->
+      <!-- Diálogos -->
       <q-dialog v-model="mostrarDialogoTratamiento" persistent>
-        <q-card style="width: 800px; max-width: 90vw">
+        <q-card class="dialog-card">
           <FormularioPrescripcion
             ref="formularioPrescripcionRef"
             :tratamiento-para-editar="tratamientoSeleccionado"
             :internacion-id="internacionId"
             :catalogo-medicamentos="catalogoMedicamentos"
           />
-          <q-card-actions align="right" class="q-pa-md bg-grey-2">
-            <q-btn flat label="Cancelar" color="grey-8" v-close-popup />
+          <q-card-actions align="right" class="dialog-actions">
+            <q-btn flat label="Cancelar" color="grey-7" v-close-popup />
             <q-btn
+              unelevated
               :label="tratamientoSeleccionado ? 'Guardar Cambios' : 'Prescribir'"
               color="primary"
               @click="guardarTratamiento"
@@ -318,9 +357,8 @@
         </q-card>
       </q-dialog>
 
-      <!-- Diálogo: Alimentación -->
       <q-dialog v-model="mostrarDialogoAlimentacion" persistent>
-        <q-card style="width: 700px; max-width: 90vw">
+        <q-card class="dialog-card">
           <AlimentacionForm
             ref="formularioAlimentacionRef"
             :internacion-id="internacionId"
@@ -331,13 +369,11 @@
         </q-card>
       </q-dialog>
 
-      <!-- Diálogo: Nota de evolución -->
       <q-dialog v-model="mostrarDialogoEvolucion" persistent>
-        <q-card style="min-width: 500px; border-radius: 12px">
-          <q-card-section class="row items-center bg-primary text-white">
-            <div class="text-h6">Nueva Nota de Evolución</div>
-            <q-space />
-            <q-btn icon="close" flat round dense v-close-popup />
+        <q-card class="evolution-dialog">
+          <q-card-section class="evolution-dialog-header">
+            <div class="dialog-title-text">Nueva Nota de Evolución</div>
+            <q-btn icon="close" flat round dense v-close-popup color="white" />
           </q-card-section>
 
           <q-form @submit.prevent="guardarEvolucion" ref="evolucionFormRef">
@@ -353,14 +389,14 @@
               />
             </q-card-section>
 
-            <q-card-actions align="right" class="q-pa-md bg-grey-2">
-              <q-btn label="Cancelar" color="grey" v-close-popup flat />
+            <q-card-actions align="right" class="dialog-actions">
+              <q-btn flat label="Cancelar" color="grey-7" v-close-popup />
               <q-btn
+                unelevated
                 label="Guardar Nota"
                 color="primary"
                 type="submit"
                 :loading="guardandoEvolucion"
-                unelevated
               />
             </q-card-actions>
           </q-form>
@@ -485,12 +521,12 @@ export default defineComponent({
     }
 
     function getColorPorEstado(estadoNum) {
-      const colores = { 0: 'green', 1: 'orange', 2: 'grey', 3: 'red' }
+      const colores = { 0: 'positive', 1: 'orange', 2: 'grey', 3: 'negative' }
       return colores[estadoNum] || 'primary'
     }
 
     function getAlimentacionColorPorEstado(estadoNum) {
-      const colores = { 0: 'positive', 1: 'orange', 2: 'grey', 3: 'red' }
+      const colores = { 0: 'positive', 1: 'orange', 2: 'grey', 3: 'negative' }
       return colores[estadoNum] || 'primary'
     }
 
@@ -523,10 +559,8 @@ export default defineComponent({
         Loading.show({ message: 'Guardando tratamiento...' })
 
         if (tratamientoSeleccionado.value && tratamientoSeleccionado.value.id) {
-          // Editar tratamiento existente
           await api.put(`/tratamientos/${tratamientoSeleccionado.value.id}`, resultado.datos)
         } else {
-          // Crear nuevo tratamiento
           await api.post('/tratamientos', resultado.datos)
         }
 
@@ -549,13 +583,13 @@ export default defineComponent({
     async function suspenderTratamiento(id) {
       Dialog.create({
         title: 'Confirmar suspensión',
-        message: '¿Desea suspender este tratamiento?',
+        message: '¿Desea suspender este tratamiento completo?',
         cancel: true,
         persistent: true,
       }).onOk(async () => {
         try {
-          Loading.show()
-          await api.put(`/tratamientos/${id}/suspender`)
+          Loading.show({ message: 'Suspendiendo tratamiento...' })
+          await api.patch(`/tratamientos/${id}/suspender`)
           Notify.create({ type: 'positive', message: 'Tratamiento suspendido correctamente.' })
           await fetchData()
         } catch (err) {
@@ -577,8 +611,8 @@ export default defineComponent({
         persistent: true,
       }).onOk(async () => {
         try {
-          Loading.show()
-          await api.put(`/recetas/${id}/suspender`)
+          Loading.show({ message: 'Suspendiendo medicamento...' })
+          await api.patch(`/recetas/${id}/suspender`)
           Notify.create({ type: 'positive', message: 'Medicamento suspendido correctamente.' })
           await fetchData()
         } catch (err) {
@@ -606,6 +640,10 @@ export default defineComponent({
       mostrarDialogoAlimentacion.value = false
       Notify.create({ type: 'positive', message: 'Plan de alimentación guardado correctamente.' })
       await fetchData()
+      // Recargar el panel de alimentación
+      if (panelAlimentacionRef.value) {
+        panelAlimentacionRef.value.cargarDatosAlimentacion()
+      }
     }
 
     function abrirDialogoEvolucion() {
@@ -644,7 +682,7 @@ export default defineComponent({
         persistent: true,
       }).onOk(async () => {
         try {
-          Loading.show()
+          Loading.show({ message: 'Procesando alta...' })
           await api.put(`/internaciones/${internacionId}/alta`)
           Notify.create({ type: 'positive', message: 'Paciente dado de alta correctamente.' })
           await fetchData()
@@ -781,7 +819,364 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.panel-internacion-page {
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  min-height: 100vh;
+}
+
+/* Loading & Error States */
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 20px;
+}
+
+.loading-text {
+  font-size: 1.125rem;
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.error-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #dc2626;
+  margin-top: 16px;
+}
+
+.error-message {
+  color: #64748b;
+  text-align: center;
+  max-width: 500px;
+}
+
+/* Content Wrapper */
+.content-wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Patient Info Card */
+.patient-info-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 32px;
+  overflow: hidden;
+}
+
+.patient-header {
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.patient-details {
+  flex: 1;
+  min-width: 300px;
+}
+
+.patient-name {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 12px;
+}
+
+.patient-meta {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.status-badge {
+  font-weight: 600;
+  padding: 8px 16px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  font-weight: 600;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Section Headers */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f766e;
+  margin: 32px 0 20px 0;
+  padding-bottom: 12px;
+  border-bottom: 3px solid #ccfbf1;
+}
+
+/* Empty States */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: white;
+  border-radius: 12px;
+  border: 2px dashed #e2e8f0;
+  margin-bottom: 20px;
+}
+
+.empty-state p {
+  color: #64748b;
+  font-size: 1rem;
+  margin-top: 16px;
+}
+
+/* Treatment Cards */
+.treatment-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.treatment-card:hover {
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.1);
+}
+
+.treatment-header {
+  background: #f8fafc;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.treatment-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.treatment-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-badge-small {
+  font-weight: 600;
+  padding: 4px 12px;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+.medications-list {
+  margin-top: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.medication-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+/* Alimentación Cards */
+.alimentacion-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 16px;
+}
+
+.alimentacion-header {
+  background: #f0fdfa;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ccfbf1;
+}
+
+.alimentacion-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.tiempos-list {
+  margin-top: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tiempo-name {
+  font-weight: 600;
+  color: #0f766e;
+}
+
+/* Section Separator */
+.section-separator {
+  margin: 48px 0;
+  background: linear-gradient(90deg, transparent, #14b8a6, transparent);
+  height: 2px;
+}
+
+/* Evolution Actions */
+.evolution-actions {
+  margin-bottom: 24px;
+}
+
+/* Evolution Notes */
+.evolution-notes {
+  margin-top: 32px;
+}
+
+.notes-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 16px;
+}
+
+.note-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.note-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.note-header {
+  background: #f8fafc;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.note-date {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+.note-author {
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.note-content {
+  padding: 20px;
+  color: #334155;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* Dialogs */
+.dialog-card {
+  width: 900px;
+  max-width: 95vw;
+  border-radius: 16px;
+}
+
+.dialog-actions {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.evolution-dialog {
+  width: 600px;
+  max-width: 95vw;
+  border-radius: 16px;
+}
+
+.evolution-dialog-header {
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dialog-title-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+}
+
+/* Text Strike */
 .text-strike {
   text-decoration: line-through;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .patient-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .patient-name {
+    font-size: 1.5rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-btn {
+    width: 100%;
+  }
+
+  .section-header {
+    font-size: 1.25rem;
+  }
+
+  .treatment-header,
+  .alimentacion-header,
+  .note-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
 }
 </style>

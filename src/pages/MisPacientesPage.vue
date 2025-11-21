@@ -1,6 +1,7 @@
 <template>
   <q-page class="mis-pacientes-page">
-    <div class="page-container">
+    <!-- Vista de lista de pacientes -->
+    <div v-if="!mostrarPanel" class="page-container">
       <div class="header-section">
         <div class="header-content">
           <div class="header-icon">
@@ -90,48 +91,49 @@
       </div>
     </div>
 
-    <q-dialog v-model="mostrarPanelClinico" full-width full-height>
-      <q-card class="panel-dialog">
-        <q-card-section class="dialog-header">
-          <div class="dialog-header-content">
-            <h2 class="dialog-title">Panel Clínico del Paciente</h2>
-            <q-btn
-              flat
-              round
-              dense
-              icon="close"
-              color="white"
-              @click="cerrarPanelClinico"
-              class="close-btn"
-            />
-          </div>
-        </q-card-section>
+    <!-- Vista del Panel Clínico -->
+    <div v-else class="panel-container">
+      <div class="panel-header">
+        <q-btn
+          flat
+          round
+          dense
+          icon="arrow_back"
+          color="white"
+          size="lg"
+          @click="cerrarPanel"
+          class="back-btn"
+        >
+          <q-tooltip>Volver a la lista</q-tooltip>
+        </q-btn>
+        <div class="panel-title-section">
+          <q-icon name="medical_services" size="32px" color="white" />
+          <h2 class="panel-title">Panel Clínico del Paciente</h2>
+        </div>
+      </div>
 
-        <q-card-section class="dialog-body">
-          <PanelInternacion
-            v-if="internacionSeleccionada"
-            :internacion-id="internacionSeleccionada"
-            @cerrar="cerrarPanelClinico"
-          />
-        </q-card-section>
-      </q-card>
-    </q-dialog>
+      <div class="panel-content">
+        <PanelInternacion
+          v-if="internacionSeleccionada"
+          :internacion-id="internacionSeleccionada"
+        />
+      </div>
+    </div>
   </q-page>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { api } from 'boot/axios'
 import { Notify } from 'quasar'
 import { format } from 'date-fns'
 import PanelInternacion from 'src/components/PanelInternacion.vue'
 
 const route = useRoute()
-const router = useRouter()
 const internaciones = ref([])
 const isLoading = ref(true)
-const mostrarPanelClinico = ref(false)
+const mostrarPanel = ref(false)
 const internacionSeleccionada = ref(null)
 
 onMounted(() => {
@@ -144,27 +146,21 @@ async function fetchMisPacientes() {
     const response = await api.get('/mis-pacientes')
     internaciones.value = response.data
 
+    // Si hay un parámetro de internación en la URL, abrir automáticamente el panel
     const internacionIdFromQuery = route.query.internacion
     if (internacionIdFromQuery) {
-      // Verify the internacion exists in the list
       const internacionExists = internaciones.value.some(
         (i) => i.id === parseInt(internacionIdFromQuery),
       )
 
       if (internacionExists) {
-        // Auto-open the panel for this patient
         abrirPanelClinico(parseInt(internacionIdFromQuery))
-
-        // Clean up the URL by removing the query parameter
-        router.replace({ query: {} })
       } else {
         Notify.create({
           color: 'warning',
           message: 'El paciente de la notificación no está en tu lista actual.',
           icon: 'warning',
         })
-        // Clean up the URL
-        router.replace({ query: {} })
       }
     }
   } catch (error) {
@@ -186,13 +182,15 @@ function formatDateTime(dateTimeString) {
 
 function abrirPanelClinico(internacionId) {
   internacionSeleccionada.value = internacionId
-  mostrarPanelClinico.value = true
+  mostrarPanel.value = true
+  // Scroll al inicio de la página
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-function cerrarPanelClinico() {
-  mostrarPanelClinico.value = false
+function cerrarPanel() {
+  mostrarPanel.value = false
   internacionSeleccionada.value = null
-  // Recargar la lista de pacientes al cerrar el panel
+  // Recargar la lista de pacientes
   fetchMisPacientes()
 }
 </script>
@@ -453,43 +451,48 @@ function cerrarPanelClinico() {
   transform: translateY(0);
 }
 
-/* Dialog Styles */
-.panel-dialog {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+/* Panel Container */
+.panel-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
 }
 
-.dialog-header {
+.panel-header {
   background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
-  padding: 20px 24px;
-  flex-shrink: 0;
-}
-
-.dialog-header-content {
+  padding: 24px 32px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 20px;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-.dialog-title {
-  font-size: 1.5rem;
-  font-weight: 600;
+.back-btn {
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.panel-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.panel-title {
+  font-size: 1.75rem;
+  font-weight: 700;
   color: white;
   margin: 0;
 }
 
-.close-btn {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.close-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.dialog-body {
-  flex: 1;
-  overflow-y: auto;
+.panel-content {
   padding: 0;
 }
 
@@ -560,6 +563,14 @@ function cerrarPanelClinico() {
   .card-header {
     flex-wrap: wrap;
   }
+
+  .panel-header {
+    padding: 16px 20px;
+  }
+
+  .panel-title {
+    font-size: 1.25rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -590,6 +601,16 @@ function cerrarPanelClinico() {
   .view-panel-btn {
     padding: 12px 20px;
     font-size: 0.9375rem;
+  }
+
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .back-btn {
+    align-self: flex-start;
   }
 }
 </style>
