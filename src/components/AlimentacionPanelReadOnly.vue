@@ -86,7 +86,12 @@
             <span>Historial de Consumos (Últimos 7 días)</span>
           </div>
 
-          <div v-if="historialConsumos.length === 0" class="empty-state-small">
+          <div v-if="cargandoConsumos" class="text-center q-pa-md">
+            <q-spinner color="teal" size="40px" />
+            <div class="q-mt-sm text-grey-7">Cargando consumos...</div>
+          </div>
+
+          <div v-else-if="historialConsumos.length === 0" class="empty-state-small">
             <q-icon name="history" size="48px" />
             <div class="q-mt-sm">Sin registros de consumo recientes.</div>
           </div>
@@ -142,7 +147,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 const props = defineProps({
@@ -155,6 +160,7 @@ const props = defineProps({
 const $q = useQuasar()
 
 const cargando = ref(true)
+const cargandoConsumos = ref(false)
 const alimentacion = ref(null)
 const historialConsumos = ref([])
 
@@ -195,6 +201,7 @@ const cargarDatosAlimentacion = async () => {
   historialConsumos.value = []
 
   try {
+    // 1. Obtener la dieta activa
     const responseDieta = await api.get(`/alimentaciones/internacion/${props.internacionId}`)
     const dietaActiva = responseDieta.data.find((a) => a.estado === 0)
 
@@ -206,12 +213,8 @@ const cargarDatosAlimentacion = async () => {
 
     alimentacion.value = dietaActiva
 
-    try {
-      const responseConsumos = await api.get(`/consumos/alimentacion/${dietaActiva.id}/historial`)
-      historialConsumos.value = responseConsumos.data || []
-    } catch (loadError) {
-      console.warn('No se pudieron cargar consumos:', loadError.message)
-    }
+    // 2. Cargar consumos de los últimos 7 días
+    await cargarConsumosUltimos7Dias(dietaActiva.id)
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -220,6 +223,59 @@ const cargarDatosAlimentacion = async () => {
     console.error('Error cargando la dieta:', error)
   } finally {
     cargando.value = false
+  }
+}
+
+const cargarConsumosUltimos7Dias = async (alimentacionId) => {
+  cargandoConsumos.value = true
+  const consumosTotales = []
+
+  try {
+    // Generar las últimas 7 fechas
+    const hoy = new Date()
+    const fechas = []
+    for (let i = 0; i < 7; i++) {
+      const fecha = subDays(hoy, i)
+      fechas.push(format(fecha, 'yyyy-MM-dd'))
+    }
+
+    // Hacer peticiones para cada fecha
+    const promesas = fechas.map(async (fecha) => {
+      try {
+        const response = await api.get(`/consumos/alimentacion/${alimentacionId}/${fecha}`)
+        return response.data || []
+      } catch {
+        // Si no hay consumos para esa fecha, retornar array vacío
+        console.log(`No hay consumos para ${fecha}`)
+        return []
+      }
+    })
+
+    const resultados = await Promise.all(promesas)
+
+    // Combinar todos los consumos y ordenarlos por fecha descendente
+    resultados.forEach((consumos) => {
+      if (Array.isArray(consumos)) {
+        consumosTotales.push(...consumos)
+      }
+    })
+
+    // Ordenar por fecha y hora descendente (más reciente primero)
+    consumosTotales.sort((a, b) => {
+      const fechaA = new Date(a.created_at || a.fecha)
+      const fechaB = new Date(b.created_at || b.fecha)
+      return fechaB - fechaA
+    })
+
+    historialConsumos.value = consumosTotales
+  } catch (error) {
+    console.error('Error cargando consumos históricos:', error)
+    $q.notify({
+      type: 'warning',
+      message: 'No se pudieron cargar algunos registros de consumo',
+    })
+  } finally {
+    cargandoConsumos.value = false
   }
 }
 </script>
