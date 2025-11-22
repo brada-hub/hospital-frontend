@@ -280,16 +280,16 @@ onMounted(() => {
 <style scoped>
 .mi-internacion-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   padding-bottom: 40px;
 }
 
 .page-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   padding: 48px 24px;
   text-align: center;
   color: white;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(13, 148, 136, 0.3);
 }
 
 .header-text {
@@ -400,7 +400,7 @@ onMounted(() => {
 }
 
 .bg-gradient-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
 }
 
 .bg-gradient-teal {

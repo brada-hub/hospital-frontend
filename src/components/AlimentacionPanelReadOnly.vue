@@ -292,7 +292,7 @@ const cargarConsumosUltimos7Dias = async (alimentacionId) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   color: white;
   padding: 24px;
 }

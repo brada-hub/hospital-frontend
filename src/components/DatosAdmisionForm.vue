@@ -304,8 +304,14 @@ import { api } from 'boot/axios'
 
 export default defineComponent({
   name: 'DatosAdmisionForm',
+  props: {
+    datosIniciales: {
+      type: Object,
+      default: null,
+    },
+  },
   emits: ['datos-listos'],
-  setup(_, { emit, expose }) {
+  setup(props, { emit, expose }) {
     const formRef = ref(null)
     const admisionForm = reactive({
       paciente_id: null,
@@ -329,6 +335,7 @@ export default defineComponent({
     const camasFiltradas = ref([])
 
     const selectedSala = ref(null)
+    const datosParaRestaurar = ref(null)
 
     // Estados de carga
     const isLoadingPacientes = ref(false)
@@ -362,17 +369,99 @@ export default defineComponent({
       )
     })
 
+    // ✅ WATCH para restaurar datos guardados
+    watch(
+      () => props.datosIniciales,
+      (newDatos) => {
+        if (newDatos) {
+          console.log('📥 Datos recibidos para restaurar:', newDatos)
+          datosParaRestaurar.value = newDatos
+          restaurarDatos()
+        }
+      },
+      { immediate: true, deep: true },
+    )
+
+    // ✅ WATCH para detectar cuando las salas están cargadas
+    watch(salasCompletas, () => {
+      if (salasCompletas.value.length > 0 && datosParaRestaurar.value) {
+        console.log('📥 Salas cargadas, restaurando datos...')
+        restaurarDatos()
+      }
+    })
+
+    // Función para restaurar datos
+    async function restaurarDatos() {
+      const newDatos = datosParaRestaurar.value
+
+      if (!newDatos) return
+
+      console.log('📥 Restaurando datos de admisión:', newDatos)
+
+      // Copiar todos los datos básicos
+      admisionForm.paciente_id = newDatos.paciente_id
+      admisionForm.medico_id = newDatos.medico_id
+      admisionForm.motivo = newDatos.motivo || ''
+      admisionForm.diagnostico = newDatos.diagnostico || ''
+      admisionForm.observaciones = newDatos.observaciones || ''
+
+      // Si hay cama_id y las salas están cargadas, buscar la sala correspondiente
+      if (newDatos.cama_id && salasCompletas.value.length > 0) {
+        try {
+          let camaEncontrada = false
+
+          // Buscar la sala correspondiente a la cama
+          for (const sala of salasCompletas.value) {
+            const response = await api.get('/camas-disponibles', {
+              params: { sala_id: sala.id },
+            })
+            const cama = response.data.find((c) => c.id === newDatos.cama_id)
+            if (cama) {
+              selectedSala.value = sala.id
+              camasDisponibles.value = response.data
+              camasFiltradas.value = response.data
+              admisionForm.cama_id = newDatos.cama_id
+              camaEncontrada = true
+              console.log('✅ Cama y sala restauradas:', { sala: sala.id, cama: newDatos.cama_id })
+              break
+            }
+          }
+
+          if (!camaEncontrada) {
+            console.warn('⚠️ No se encontró la sala para la cama:', newDatos.cama_id)
+          }
+        } catch (error) {
+          console.error('❌ Error al restaurar sala de la cama:', error)
+        }
+      }
+
+      // Limpiar errores
+      errorPaciente.value = ''
+      errorMedico.value = ''
+      errorSala.value = ''
+      errorCama.value = ''
+      errorMotivo.value = ''
+      errorDiagnostico.value = ''
+    }
+
     onMounted(() => {
       cargarPacientes()
       cargarSalas()
       cargarMedicos()
     })
 
-    watch(selectedSala, (newId) => {
-      admisionForm.cama_id = null
+    watch(selectedSala, (newId, oldId) => {
+      // Solo limpiar si NO estamos restaurando datos Y la sala cambió realmente
+      const estaRestaurando = datosParaRestaurar.value && datosParaRestaurar.value.cama_id
+
+      if (!estaRestaurando && oldId !== undefined) {
+        admisionForm.cama_id = null
+        errorCama.value = ''
+      }
+
       camasDisponibles.value = []
       camasFiltradas.value = []
-      errorCama.value = ''
+
       if (newId) {
         cargarCamasDisponibles(newId)
       }
@@ -435,7 +524,6 @@ export default defineComponent({
     async function cargarPacientes() {
       isLoadingPacientes.value = true
       try {
-        // ✅ Usar el endpoint correcto que no requiere parámetros
         const response = await api.get('/pacientes/buscar', { params: { termino: '' } })
         pacientesCompletos.value = response.data
         pacientesFiltrados.value = response.data
@@ -604,7 +692,6 @@ export default defineComponent({
       })
       selectedSala.value = null
 
-      // Resetear errores
       errorPaciente.value = ''
       errorMedico.value = ''
       errorSala.value = ''
@@ -612,7 +699,6 @@ export default defineComponent({
       errorMotivo.value = ''
       errorDiagnostico.value = ''
 
-      // Restaurar listas filtradas
       pacientesFiltrados.value = pacientesCompletos.value
       medicosFiltrados.value = medicosCompletos.value
       salasFiltradas.value = salasCompletas.value
@@ -762,7 +848,6 @@ export default defineComponent({
   cursor: not-allowed;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .form-section {
     padding: 16px;

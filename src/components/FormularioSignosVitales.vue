@@ -1,8 +1,6 @@
 <template>
   <div class="signos-vitales-form">
     <q-form ref="formRef" class="form-content">
-      <!-- HEADER -->
-
       <!-- LOADING STATE -->
       <div v-if="loading" class="text-center q-py-lg">
         <q-spinner color="teal" size="3em" />
@@ -25,7 +23,6 @@
               <span class="text-grey-7 q-ml-xs">({{ signo.unidad }})</span>
             </div>
 
-            <!-- Agregado q-input con validaciones en tiempo real y estilos estandarizados -->
             <q-input
               outlined
               v-model.number="signo.medida"
@@ -47,7 +44,6 @@
                 <q-icon name="edit" color="teal" />
               </template>
               <template v-slot:hint>
-                <!-- Mejorado para mostrar rangos y estado de validación -->
                 <div class="flex items-center q-mt-xs">
                   <q-icon name="info" size="12px" class="q-mr-xs" />
                   <span class="text-teal-8"
@@ -57,7 +53,7 @@
               </template>
             </q-input>
 
-            <!-- Indicador visual mejorado con estado específico del rango -->
+            <!-- Indicador visual mejorado -->
             <div v-if="signo.medida" class="validacion-indicator q-mt-sm">
               <q-icon
                 :name="esSignoValido(signo) ? 'check_circle' : 'warning'"
@@ -89,6 +85,10 @@ const props = defineProps({
     default: 'todos',
     validator: (value) => ['todos', 'rutinario'].includes(value),
   },
+  signosIniciales: {
+    type: Array,
+    default: null,
+  },
 })
 
 defineExpose({
@@ -110,13 +110,53 @@ async function fetchSignos() {
     }
     const response = await api.get(url)
     signos.value = response.data.map((s) => ({ ...s, medida: null }))
+
+    // ✅ Cargar valores guardados si existen
+    if (props.signosIniciales && props.signosIniciales.length > 0) {
+      console.log('📥 Restaurando signos vitales guardados:', props.signosIniciales)
+      props.signosIniciales.forEach((signoGuardado) => {
+        const signo = signos.value.find((s) => s.id === signoGuardado.signo_id)
+        if (signo) {
+          // Convertir de string a número si es necesario
+          signo.medida =
+            typeof signoGuardado.medida === 'string'
+              ? parseFloat(signoGuardado.medida)
+              : signoGuardado.medida
+        }
+      })
+    }
   } catch (error) {
     console.error(`Error al cargar signos (${props.tipo}):`, error)
-    Notify.create({ color: 'negative', message: 'No se pudo cargar la lista de signos vitales.' })
+    Notify.create({
+      color: 'negative',
+      message: 'No se pudo cargar la lista de signos vitales.',
+      position: 'top',
+    })
   } finally {
     loading.value = false
   }
 }
+
+// ✅ WATCH para recargar cuando cambien los datos iniciales
+watch(
+  () => props.signosIniciales,
+  (newSignos) => {
+    if (newSignos && newSignos.length > 0 && signos.value.length > 0) {
+      console.log('📥 Actualizando signos vitales:', newSignos)
+      newSignos.forEach((signoGuardado) => {
+        const signo = signos.value.find((s) => s.id === signoGuardado.signo_id)
+        if (signo) {
+          signo.medida =
+            typeof signoGuardado.medida === 'string'
+              ? parseFloat(signoGuardado.medida)
+              : signoGuardado.medida
+          errorSignos.value[signo.id] = ''
+        }
+      })
+    }
+  },
+  { deep: true },
+)
 
 watch(
   () => props.tipo,
@@ -176,11 +216,9 @@ function getMensajeValidacion(signo) {
 async function validarYObtenerDatos() {
   if (!formRef.value) return { datos: [], esValido: false }
 
-  // Valida todas las reglas de Quasar
   const esValidoDelForm = await formRef.value.validate()
   if (!esValidoDelForm) return { datos: [], esValido: false }
 
-  // Filtra los datos ingresados
   const datos = signos.value
     .filter((s) => s.medida !== null && s.medida !== '')
     .map((s) => ({ signo_id: s.id, medida: s.medida }))
@@ -202,7 +240,6 @@ async function validarYObtenerDatos() {
   gap: 24px;
 }
 
-/* Estilos estandarizados del componente de admisión */
 .form-section {
   background: #f8fafc;
   border-radius: 12px;
@@ -281,7 +318,6 @@ async function validarYObtenerDatos() {
   font-weight: 500;
 }
 
-/* Indicador visual de validación en tiempo real */
 .validacion-indicator {
   display: flex;
   align-items: center;
@@ -289,7 +325,6 @@ async function validarYObtenerDatos() {
   font-weight: 500;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .form-section {
     padding: 16px;

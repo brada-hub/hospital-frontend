@@ -50,7 +50,6 @@
           </q-input>
         </div>
         <div class="col-12">
-          <!-- Added ref to reset validation state after adding cuidado -->
           <q-input
             ref="descripcionRef"
             type="textarea"
@@ -112,6 +111,13 @@
 <script setup>
 import { ref, reactive, watch } from 'vue'
 
+const props = defineProps({
+  cuidadosIniciales: {
+    type: Array,
+    default: () => [],
+  },
+})
+
 const emit = defineEmits(['update:cuidados'])
 
 const cuidados = ref([])
@@ -122,8 +128,23 @@ const nuevoCuidado = reactive({
   frecuencia: 'Según necesidad',
 })
 
+// ✅ WATCH para cargar cuidados iniciales
+watch(
+  () => props.cuidadosIniciales,
+  (newCuidados) => {
+    if (newCuidados && newCuidados.length > 0) {
+      console.log('📥 Restaurando cuidados guardados:', newCuidados)
+      // Hacer una copia profunda para evitar referencias
+      cuidados.value = newCuidados.map((c) => ({ ...c }))
+    } else if (newCuidados && newCuidados.length === 0 && cuidados.value.length > 0) {
+      // Si se resetea desde el padre, limpiar también aquí
+      cuidados.value = []
+    }
+  },
+  { immediate: true, deep: true },
+)
+
 function validarDescripcion() {
-  // Only validation on blur, doesn't persist error state
   return !!nuevoCuidado.descripcion
 }
 
@@ -132,15 +153,14 @@ function agregarCuidado() {
 
   cuidados.value.push({ ...nuevoCuidado })
 
-  // Reset de campo sin activar validación automática
+  // Reset del formulario
   nuevoCuidado.descripcion = ''
   nuevoCuidado.tipo = 'Cuidado General'
   nuevoCuidado.frecuencia = 'Según necesidad'
 
-  // Limpia el estado de error del input
   if (descripcionRef.value) {
     descripcionRef.value.resetValidation()
-    descripcionRef.value.blur() // fuerza salir del modo “validando”
+    descripcionRef.value.blur()
   }
 }
 
@@ -162,7 +182,6 @@ watch(
   padding: 0;
 }
 
-/* Estilos estandarizados del componente de admisión */
 .form-section {
   background: #f8fafc;
   border-radius: 12px;
@@ -191,7 +210,6 @@ watch(
   font-size: 0.875rem;
 }
 
-/* Alert info styling */
 .alert-info {
   background: #fef3c7;
   border-left: 4px solid #f59e0b;
@@ -209,7 +227,6 @@ watch(
   margin-top: 2px;
 }
 
-/* Input field styling */
 .input-field {
   transition: all 0.3s ease;
 }
@@ -233,7 +250,6 @@ watch(
   font-weight: 500;
 }
 
-/* Button styling */
 .btn-add {
   background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
   color: white;
@@ -252,7 +268,6 @@ watch(
   color: #9ca3af;
 }
 
-/* Cuidados list styling */
 .cuidados-list {
   border-radius: 12px !important;
   overflow: hidden;
@@ -286,7 +301,6 @@ watch(
   color: #14b8a6;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .form-section {
     padding: 16px;

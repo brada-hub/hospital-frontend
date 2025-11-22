@@ -273,7 +273,7 @@ function formatearFechaHora(fecha) {
   color: white;
   margin-bottom: 24px;
   padding: 16px;
-  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
@@ -326,11 +326,11 @@ function formatearFechaHora(fecha) {
 
 .cuidado-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.15);
+  box-shadow: 0 8px 20px rgba(13, 148, 136, 0.15);
 }
 
 .cuidado-header {
-  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   padding: 20px;
   color: white;
 }

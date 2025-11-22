@@ -52,7 +52,11 @@
                 </p>
               </div>
             </div>
-            <DatosAdmisionForm ref="admisionFormRef" @datos-listos="onDatosAdmisionListos" />
+            <DatosAdmisionForm
+              ref="admisionFormRef"
+              :datos-iniciales="datosDeAdmision"
+              @datos-listos="onDatosAdmisionListos"
+            />
           </div>
         </q-step>
 
@@ -76,7 +80,10 @@
                 </p>
               </div>
             </div>
-            <FormularioSignosVitales ref="signosVitalesFormRef" />
+            <FormularioSignosVitales
+              ref="signosVitalesFormRef"
+              :signos-iniciales="datosDeSignosVitales"
+            />
 
             <q-stepper-navigation class="step-navigation">
               <q-btn
@@ -129,7 +136,11 @@
               </div>
             </div>
 
-            <FormularioCuidados @update:cuidados="onCuidadosUpdate" />
+            <FormularioCuidados
+              ref="cuidadosFormRef"
+              :cuidados-iniciales="datosCuidados"
+              @update:cuidados="onCuidadosUpdate"
+            />
 
             <q-stepper-navigation class="step-navigation">
               <q-btn
@@ -225,6 +236,7 @@ export default defineComponent({
 
     const admisionFormRef = ref(null)
     const signosVitalesFormRef = ref(null)
+    const cuidadosFormRef = ref(null)
 
     const datosDeAdmision = ref(null)
     const datosDeSignosVitales = ref(null)
@@ -232,10 +244,15 @@ export default defineComponent({
     const nuevaInternacionId = ref(null)
 
     function onDatosAdmisionListos(formData) {
-      datosDeAdmision.value = formData
+      console.log('✅ Datos de admisión recibidos:', formData)
+
+      // ✅ CLAVE: Guardamos una COPIA del objeto para evitar referencias reactivas
+      datosDeAdmision.value = { ...formData }
+
+      console.log('✅ Datos almacenados en datosDeAdmision.value:', datosDeAdmision.value)
+
       stepper.value.next()
 
-      // Notificación elegante
       Notify.create({
         type: 'positive',
         message: 'Datos de admisión guardados correctamente',
@@ -246,12 +263,21 @@ export default defineComponent({
     }
 
     async function onSignosListos() {
-      if (!signosVitalesFormRef.value) return
+      if (!signosVitalesFormRef.value) {
+        console.error('❌ Ref de signos vitales no disponible')
+        return
+      }
 
       const { datos, esValido } = await signosVitalesFormRef.value.validarYObtenerDatos()
 
+      console.log('📊 Validación de signos vitales:', { datos, esValido })
+
       if (esValido) {
-        datosDeSignosVitales.value = datos
+        // ✅ CLAVE: Guardamos una COPIA del array
+        datosDeSignosVitales.value = [...datos]
+
+        console.log('✅ Signos vitales almacenados:', datosDeSignosVitales.value)
+
         stepper.value.next()
 
         Notify.create({
@@ -273,15 +299,27 @@ export default defineComponent({
     }
 
     function onCuidadosUpdate(cuidados) {
-      datosCuidados.value = cuidados
+      console.log('🩺 Cuidados actualizados:', cuidados)
+
+      // ✅ CLAVE: Guardamos una COPIA del array
+      datosCuidados.value = [...cuidados]
+
+      console.log('✅ Cuidados almacenados:', datosCuidados.value)
     }
 
     async function finalizarAdmision() {
-      if (!datosDeAdmision.value || !datosDeSignosVitales.value) {
+      console.log('🚀 Iniciando proceso de finalización...')
+      console.log('📋 Estado actual de los datos:')
+      console.log('  - datosDeAdmision:', datosDeAdmision.value)
+      console.log('  - datosDeSignosVitales:', datosDeSignosVitales.value)
+      console.log('  - datosCuidados:', datosCuidados.value)
+
+      // ✅ Validación mejorada
+      if (!datosDeAdmision.value) {
+        console.error('❌ Faltan datos de admisión')
         Notify.create({
           type: 'negative',
-          message:
-            'Faltan datos de pasos anteriores. Por favor, retroceda y complete la información.',
+          message: 'Faltan datos de admisión. Por favor, retroceda y complete el formulario.',
           icon: 'error',
           position: 'top',
           timeout: 4000,
@@ -289,16 +327,39 @@ export default defineComponent({
         return
       }
 
+      if (!datosDeSignosVitales.value || datosDeSignosVitales.value.length === 0) {
+        console.error('❌ Faltan signos vitales')
+        Notify.create({
+          type: 'negative',
+          message: 'Faltan signos vitales. Por favor, retroceda y complete el registro.',
+          icon: 'error',
+          position: 'top',
+          timeout: 4000,
+        })
+        return
+      }
+
+      // ✅ CONVERTIR MEDIDAS A STRING (el backend lo requiere así)
+      const signosVitalesFormateados = datosDeSignosVitales.value.map((signo) => ({
+        signo_id: signo.signo_id,
+        medida: String(signo.medida), // Convertir a string
+      }))
+
       const payload = {
         admision: datosDeAdmision.value,
-        signos_vitales: datosDeSignosVitales.value,
-        cuidados: datosCuidados.value,
+        signos_vitales: signosVitalesFormateados,
+        cuidados: datosCuidados.value || [],
       }
+
+      console.log('📤 Payload a enviar:', JSON.stringify(payload, null, 2))
 
       isSaving.value = true
 
       try {
         const response = await api.post('/admisiones', payload)
+
+        console.log('✅ Respuesta del servidor:', response.data)
+
         nuevaInternacionId.value = response.data.data.id
 
         Notify.create({
@@ -311,7 +372,17 @@ export default defineComponent({
 
         step.value = 4
       } catch (error) {
+        console.error('❌ Error completo:', error)
+        console.error('❌ Response data:', error.response?.data)
+        console.error('❌ Response status:', error.response?.status)
+
         const msg = error.response?.data?.message || 'Ocurrió un error al guardar la admisión'
+
+        // Mostrar errores de validación si existen
+        if (error.response?.data?.errors) {
+          console.error('❌ Errores de validación:', error.response.data.errors)
+        }
+
         Notify.create({
           type: 'negative',
           message: msg,
@@ -348,6 +419,7 @@ export default defineComponent({
       isSaving,
       admisionFormRef,
       signosVitalesFormRef,
+      cuidadosFormRef,
       nuevaInternacionId,
       onDatosAdmisionListos,
       onSignosListos,
