@@ -13,8 +13,8 @@
         <div class="text-grey-8 q-mt-md">No se encontraron signos vitales para registrar.</div>
       </div>
 
-      <!-- SIGNOS VITALES INPUTS -->
-      <div v-else>
+      <!-- Grid responsivo para signos vitales -->
+      <div v-else class="signos-grid">
         <div v-for="signo in signos" :key="signo.id" class="form-section">
           <div class="signo-container">
             <div class="signo-label">
@@ -23,22 +23,65 @@
               <span class="text-grey-7 q-ml-xs">({{ signo.unidad }})</span>
             </div>
 
+            <!-- DUAL INPUTS para signos que requieren valores duales -->
+            <div v-if="signo.requiere_valores_duales" class="dual-inputs-container">
+              <q-input
+                outlined
+                v-model.number="signo.medida"
+                type="number"
+                step="0.1"
+                dense
+                label="Valor Alto *"
+                :rules="validationRules"
+                reactive-rules
+                lazy-rules="ondemand"
+                class="input-field dual-input"
+                @update:model-value="onInputChange(signo, 'medida')"
+                :error="getError(signo.id, 'medida') !== ''"
+                :error-message="getError(signo.id, 'medida')"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="arrow_upward" color="red" />
+                </template>
+              </q-input>
+
+              <q-input
+                outlined
+                v-model.number="signo.medida_baja"
+                type="number"
+                step="0.1"
+                dense
+                label="Valor Bajo *"
+                :rules="validationRules"
+                reactive-rules
+                lazy-rules="ondemand"
+                class="input-field dual-input"
+                @update:model-value="onInputChange(signo, 'medida_baja')"
+                :error="getError(signo.id, 'medida_baja') !== ''"
+                :error-message="getError(signo.id, 'medida_baja')"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="arrow_downward" color="blue" />
+                </template>
+              </q-input>
+            </div>
+
+            <!-- SINGLE INPUT para signos normales -->
             <q-input
+              v-else
               outlined
               v-model.number="signo.medida"
               type="number"
+              step="0.1"
               dense
               :label="`Ingrese ${signo.nombre.toLowerCase()} *`"
-              :rules="[
-                (val) => (val !== null && val !== '') || 'Este campo es requerido',
-                (val) => val > 0 || 'El valor debe ser mayor a 0',
-                (val) => val <= 300 || 'Valor muy alto, verifique',
-              ]"
+              :rules="validationRules"
               reactive-rules
+              lazy-rules="ondemand"
               class="input-field q-mt-md"
-              @update:model-value="validarSigno(signo)"
-              :error="errorSignos[signo.id] !== ''"
-              :error-message="errorSignos[signo.id]"
+              @update:model-value="onInputChange(signo, 'medida')"
+              :error="getError(signo.id, 'medida') !== ''"
+              :error-message="getError(signo.id, 'medida')"
             >
               <template v-slot:prepend>
                 <q-icon name="edit" color="teal" />
@@ -46,15 +89,13 @@
               <template v-slot:hint>
                 <div class="flex items-center q-mt-xs">
                   <q-icon name="info" size="12px" class="q-mr-xs" />
-                  <span class="text-teal-8"
-                    >Rango recomendado: {{ getRangoRecomendado(signo) }}</span
-                  >
+                  <span class="text-teal-8">Rango: {{ getRangoRecomendado(signo) }}</span>
                 </div>
               </template>
             </q-input>
 
-            <!-- Indicador visual mejorado -->
-            <div v-if="signo.medida" class="validacion-indicator q-mt-sm">
+            <!-- INDICADOR DE VALIDACIÓN -->
+            <div v-if="hasAnyValue(signo)" class="validacion-indicator q-mt-sm">
               <q-icon
                 :name="esSignoValido(signo) ? 'check_circle' : 'warning'"
                 :color="esSignoValido(signo) ? 'positive' : 'warning'"
@@ -98,35 +139,35 @@ defineExpose({
 const formRef = ref(null)
 const signos = ref([])
 const loading = ref(true)
-const errorSignos = ref({})
+const errorMessages = ref({})
+
+const validationRules = [
+  (val) => (val !== null && val !== '' && val !== undefined) || 'Este campo es requerido',
+  (val) => val > 0 || 'El valor debe ser mayor a 0',
+  (val) => val <= 300 || 'Valor muy alto, verifique',
+]
 
 async function fetchSignos() {
   loading.value = true
-  errorSignos.value = {}
+  errorMessages.value = {}
+
   try {
     let url = '/signos'
     if (props.tipo === 'rutinario') {
       url += '?tipo=rutinario'
     }
-    const response = await api.get(url)
-    signos.value = response.data.map((s) => ({ ...s, medida: null }))
 
-    // ✅ Cargar valores guardados si existen
+    const response = await api.get(url)
+    signos.value = response.data.map((s) => ({
+      ...s,
+      medida: null,
+      medida_baja: null,
+    }))
+
     if (props.signosIniciales && props.signosIniciales.length > 0) {
-      console.log('📥 Restaurando signos vitales guardados:', props.signosIniciales)
-      props.signosIniciales.forEach((signoGuardado) => {
-        const signo = signos.value.find((s) => s.id === signoGuardado.signo_id)
-        if (signo) {
-          // Convertir de string a número si es necesario
-          signo.medida =
-            typeof signoGuardado.medida === 'string'
-              ? parseFloat(signoGuardado.medida)
-              : signoGuardado.medida
-        }
-      })
+      restaurarSignosGuardados()
     }
-  } catch (error) {
-    console.error(`Error al cargar signos (${props.tipo}):`, error)
+  } catch  {
     Notify.create({
       color: 'negative',
       message: 'No se pudo cargar la lista de signos vitales.',
@@ -137,62 +178,89 @@ async function fetchSignos() {
   }
 }
 
-// ✅ WATCH para recargar cuando cambien los datos iniciales
+function restaurarSignosGuardados() {
+  if (!props.signosIniciales || props.signosIniciales.length === 0) return
+
+  props.signosIniciales.forEach((signoGuardado) => {
+    const signo = signos.value.find((s) => s.id === signoGuardado.signo_id)
+    if (signo) {
+      signo.medida = typeof signoGuardado.medida === 'string'
+        ? parseFloat(signoGuardado.medida)
+        : signoGuardado.medida
+
+      if (signoGuardado.medida_baja) {
+        signo.medida_baja = typeof signoGuardado.medida_baja === 'string'
+          ? parseFloat(signoGuardado.medida_baja)
+          : signoGuardado.medida_baja
+      }
+
+      if (errorMessages.value[signo.id]) {
+        delete errorMessages.value[signo.id]
+      }
+    }
+  })
+}
+
 watch(
   () => props.signosIniciales,
   (newSignos) => {
     if (newSignos && newSignos.length > 0 && signos.value.length > 0) {
-      console.log('📥 Actualizando signos vitales:', newSignos)
-      newSignos.forEach((signoGuardado) => {
-        const signo = signos.value.find((s) => s.id === signoGuardado.signo_id)
-        if (signo) {
-          signo.medida =
-            typeof signoGuardado.medida === 'string'
-              ? parseFloat(signoGuardado.medida)
-              : signoGuardado.medida
-          errorSignos.value[signo.id] = ''
-        }
-      })
+      restaurarSignosGuardados()
     }
   },
-  { deep: true },
+  { deep: true }
 )
 
 watch(
   () => props.tipo,
   () => {
     signos.value = []
-    errorSignos.value = {}
+    errorMessages.value = {}
     fetchSignos()
   },
-  { immediate: true },
+  { immediate: true }
 )
 
-function validarSigno(signo) {
-  if (!signo.medida || signo.medida === '') {
-    errorSignos.value[signo.id] = 'Este campo es requerido'
-    return
+function onInputChange(signo, campo) {
+  const valor = signo[campo]
+
+  if (!errorMessages.value[signo.id]) {
+    errorMessages.value[signo.id] = {}
   }
 
-  if (signo.medida <= 0) {
-    errorSignos.value[signo.id] = 'El valor debe ser mayor a 0'
-    return
+  if (valor === null || valor === '' || valor === undefined) {
+    errorMessages.value[signo.id][campo] = 'Este campo es requerido'
+  } else if (valor <= 0) {
+    errorMessages.value[signo.id][campo] = 'El valor debe ser mayor a 0'
+  } else if (valor > 300) {
+    errorMessages.value[signo.id][campo] = 'Valor muy alto, verifique'
+  } else {
+    errorMessages.value[signo.id][campo] = ''
   }
 
-  if (signo.medida > 300) {
-    errorSignos.value[signo.id] = 'Valor muy alto, verifique'
-    return
-  }
+  errorMessages.value = { ...errorMessages.value }
+}
 
-  errorSignos.value[signo.id] = ''
+function getError(signoId, campo) {
+  return errorMessages.value[signoId]?.[campo] || ''
+}
+
+function hasAnyValue(signo) {
+  return (signo.medida !== null && signo.medida !== '') ||
+         (signo.medida_baja !== null && signo.medida_baja !== '')
 }
 
 function esSignoValido(signo) {
-  if (!signo.medida || signo.medida === '') return false
-  if (signo.medida <= 0) return false
-  if (signo.rango_minimo && signo.medida < signo.rango_minimo) return false
-  if (signo.rango_maximo && signo.medida > signo.rango_maximo) return false
-  return true
+  if (signo.requiere_valores_duales) {
+    const medidaValida = signo.medida !== null && signo.medida !== '' &&
+                         signo.medida > 0 && signo.medida <= 300
+    const medidaBajaValida = signo.medida_baja !== null && signo.medida_baja !== '' &&
+                             signo.medida_baja > 0 && signo.medida_baja <= 300
+    return medidaValida && medidaBajaValida
+  } else {
+    return signo.medida !== null && signo.medida !== '' &&
+           signo.medida > 0 && signo.medida <= 300
+  }
 }
 
 function getRangoRecomendado(signo) {
@@ -202,14 +270,22 @@ function getRangoRecomendado(signo) {
 }
 
 function getMensajeValidacion(signo) {
-  if (!signo.medida || signo.medida === '') return 'Ingrese un valor'
-  if (signo.medida <= 0) return 'El valor debe ser mayor a 0'
-  if (signo.rango_minimo && signo.medida < signo.rango_minimo) {
-    return `Valor bajo - por debajo del rango (${signo.rango_minimo})`
+  if (signo.requiere_valores_duales) {
+    if (!signo.medida || signo.medida === '' || !signo.medida_baja || signo.medida_baja === '') {
+      return 'Complete ambos valores'
+    }
+    if (signo.medida <= 0 || signo.medida_baja <= 0) {
+      return 'Los valores deben ser mayores a 0'
+    }
+    if (signo.medida > 300 || signo.medida_baja > 300) {
+      return 'Valores muy altos, verifique'
+    }
+  } else {
+    if (!signo.medida || signo.medida === '') return 'Ingrese un valor'
+    if (signo.medida <= 0) return 'El valor debe ser mayor a 0'
+    if (signo.medida > 300) return 'Valor muy alto, verifique'
   }
-  if (signo.rango_maximo && signo.medida > signo.rango_maximo) {
-    return `Valor alto - por encima del rango (${signo.rango_maximo})`
-  }
+
   return 'Validado'
 }
 
@@ -217,13 +293,30 @@ async function validarYObtenerDatos() {
   if (!formRef.value) return { datos: [], esValido: false }
 
   const esValidoDelForm = await formRef.value.validate()
-  if (!esValidoDelForm) return { datos: [], esValido: false }
 
   const datos = signos.value
-    .filter((s) => s.medida !== null && s.medida !== '')
-    .map((s) => ({ signo_id: s.id, medida: s.medida }))
+    .filter((s) => {
+      if (s.requiere_valores_duales) {
+        return (s.medida !== null && s.medida !== '') &&
+               (s.medida_baja !== null && s.medida_baja !== '')
+      } else {
+        return s.medida !== null && s.medida !== ''
+      }
+    })
+    .map((s) => {
+      const dato = {
+        signo_id: s.id,
+        medida: s.medida,
+      }
 
-  const esValidoFinal = props.tipo === 'todos' ? esValidoDelForm : datos.length > 0
+      if (s.requiere_valores_duales && s.medida_baja !== null && s.medida_baja !== '') {
+        dato.medida_baja = s.medida_baja
+      }
+
+      return dato
+    })
+
+  const esValidoFinal = esValidoDelForm && datos.length > 0
 
   return { datos, esValido: esValidoFinal }
 }
@@ -232,18 +325,26 @@ async function validarYObtenerDatos() {
 <style scoped>
 .signos-vitales-form {
   padding: 0;
+  width: 100%;
 }
 
 .form-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: clamp(16px, 3vw, 24px);
+}
+
+/* Grid responsivo - 3 columnas en desktop, 2 en tablet, 1 en mobile */
+.signos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(12px, 2vw, 20px);
 }
 
 .form-section {
   background: #f8fafc;
   border-radius: 12px;
-  padding: 20px;
+  padding: clamp(14px, 2vw, 20px);
   border: 2px solid #e2e8f0;
   transition: all 0.3s ease;
 }
@@ -253,29 +354,31 @@ async function validarYObtenerDatos() {
   box-shadow: 0 2px 8px rgba(20, 184, 166, 0.1);
 }
 
-.section-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #0d9488;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #ccfbf1;
-  display: flex;
-  align-items: center;
-}
-
 .signo-container {
   display: flex;
   flex-direction: column;
 }
 
 .signo-label {
-  font-size: 0.95rem;
+  font-size: clamp(0.85rem, 2vw, 0.95rem);
   font-weight: 500;
   color: #0d9488;
   margin-bottom: 12px;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.dual-inputs-container {
+  display: flex;
+  gap: clamp(8px, 2vw, 16px);
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.dual-input {
+  flex: 1;
+  min-width: 100px;
 }
 
 .input-field {
@@ -296,16 +399,9 @@ async function validarYObtenerDatos() {
 }
 
 @keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-4px);
-  }
-  75% {
-    transform: translateX(4px);
-  }
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
 }
 
 .input-field :deep(.q-field__messages) {
@@ -323,15 +419,30 @@ async function validarYObtenerDatos() {
   align-items: center;
   font-size: 0.85rem;
   font-weight: 500;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 1200px) {
+  .signos-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
-  .form-section {
-    padding: 16px;
+  .signos-grid {
+    grid-template-columns: 1fr;
   }
 
-  .section-title {
-    font-size: 1rem;
+  .dual-inputs-container {
+    flex-direction: column;
+  }
+
+  .dual-input {
+    min-width: 100%;
   }
 
   .signo-label {

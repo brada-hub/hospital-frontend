@@ -1,285 +1,294 @@
 <template>
   <div class="datos-admision-form">
     <q-form ref="formRef" @submit.prevent="validarYContinuar" class="form-content">
-      <!-- BUSCAR PACIENTE -->
-      <div class="form-section">
-        <div class="section-title">
-          <q-icon name="person_search" size="20px" class="q-mr-xs" />
-          Seleccionar Paciente
-        </div>
+      <!-- Grid responsivo de 2 columnas para desktop, 1 para mobile -->
+      <div class="form-grid">
+        <!-- BUSCAR PACIENTE -->
+        <div class="form-section">
+          <div class="section-title">
+            <q-icon name="person_search" size="20px" class="q-mr-xs" />
+            Seleccionar Paciente
+          </div>
 
-        <q-select
-          outlined
-          v-model="admisionForm.paciente_id"
-          use-input
-          input-debounce="300"
-          label="Buscar paciente por nombre o CI *"
-          :options="pacientesFiltrados"
-          @filter="filtrarPacientes"
-          option-value="id"
-          :option-label="
-            (paciente) => `${paciente.nombre} ${paciente.apellidos} - CI: ${paciente.ci}`
-          "
-          emit-value
-          map-options
-          :rules="[(val) => !!val || 'Debe seleccionar un paciente']"
-          reactive-rules
-          :loading="isLoadingPacientes"
-          class="input-field"
-          @update:model-value="validarPaciente"
-          :error="errorPaciente !== ''"
-          :error-message="errorPaciente"
-        >
-          <template v-slot:prepend>
-            <q-icon name="person_search" color="teal" />
-          </template>
-          <template v-slot:no-option>
-            <q-item>
-              <q-item-section class="text-grey">
-                <div class="text-center q-pa-md">
-                  <q-icon name="search_off" size="48px" color="grey-5" />
-                  <div class="q-mt-sm">No se encontraron pacientes</div>
-                </div>
-              </q-item-section>
-            </q-item>
-          </template>
-          <template v-slot:hint>
-            <span class="text-teal-8">
-              <q-icon name="info" size="14px" />
-              Escriba para buscar o seleccione de la lista
-            </span>
-          </template>
-        </q-select>
-      </div>
-
-      <!-- SELECCIONAR MÉDICO RESPONSABLE -->
-      <div class="form-section">
-        <div class="section-title">
-          <q-icon name="medical_information" size="20px" class="q-mr-xs" />
-          Asignación de Profesional
-        </div>
-
-        <q-select
-          outlined
-          v-model="admisionForm.medico_id"
-          :options="medicosFiltrados"
-          use-input
-          input-debounce="300"
-          @filter="filtrarMedicos"
-          label="Médico Responsable *"
-          option-value="id"
-          emit-value
-          map-options
-          :rules="[(val) => !!val || 'Debe asignar un médico']"
-          reactive-rules
-          :loading="isLoadingMedicos"
-          class="input-field"
-          @update:model-value="validarMedico"
-          :error="errorMedico !== ''"
-          :error-message="errorMedico"
-        >
-          <template v-slot:prepend>
-            <q-icon name="medical_information" color="teal" />
-          </template>
-          <template v-slot:selected>
-            <div v-if="admisionForm.medico_id">
-              {{ getNombreMedico(admisionForm.medico_id) }}
-            </div>
-          </template>
-          <template v-slot:option="scope">
-            <q-item v-bind="scope.itemProps">
-              <q-item-section>
-                <q-item-label>{{ scope.opt.nombre }} {{ scope.opt.apellidos }}</q-item-label>
-                <q-item-label caption
-                  >{{ scope.opt.pacientes_activos_count }} pacientes activos</q-item-label
-                >
-              </q-item-section>
-            </q-item>
-          </template>
-          <template v-slot:no-option>
-            <q-item>
-              <q-item-section class="text-grey">
-                <div class="text-center q-pa-md">
-                  <q-icon name="search_off" size="48px" color="grey-5" />
-                  <div class="q-mt-sm">No se encontraron médicos</div>
-                </div>
-              </q-item-section>
-            </q-item>
-          </template>
-          <template v-slot:hint>
-            <span class="text-teal-8">
-              <q-icon name="info" size="14px" />
-              Seleccione el médico responsable del paciente
-            </span>
-          </template>
-        </q-select>
-      </div>
-
-      <!-- ASIGNACIÓN DE CAMA -->
-      <div class="form-section">
-        <div class="section-title">
-          <q-icon name="bed" size="20px" class="q-mr-xs" />
-          Asignación de Cama
-        </div>
-
-        <q-select
-          outlined
-          v-model="selectedSala"
-          :options="salasFiltradas"
-          use-input
-          input-debounce="300"
-          @filter="filtrarSalas"
-          option-value="id"
-          :option-label="
-            (sala) =>
-              `${sala.nombre} (${sala.especialidad ? sala.especialidad.nombre : 'Sin especialidad'})`
-          "
-          emit-value
-          map-options
-          label="1. Seleccionar Sala *"
-          :rules="[(val) => !!val || 'Seleccione una sala']"
-          reactive-rules
-          class="input-field q-mb-md"
-          @update:model-value="validarSala"
-          :error="errorSala !== ''"
-          :error-message="errorSala"
-        >
-          <template v-slot:prepend>
-            <q-icon name="meeting_room" color="teal" />
-          </template>
-          <template v-slot:no-option>
-            <q-item>
-              <q-item-section class="text-grey">
-                <div class="text-center q-pa-md">
-                  <q-icon name="search_off" size="48px" color="grey-5" />
-                  <div class="q-mt-sm">No se encontraron salas</div>
-                </div>
-              </q-item-section>
-            </q-item>
-          </template>
-          <template v-slot:hint>
-            <span class="text-teal-8">
-              <q-icon name="info" size="14px" />
-              Seleccione la sala donde se ubicará el paciente
-            </span>
-          </template>
-        </q-select>
-
-        <q-select
-          outlined
-          v-model="admisionForm.cama_id"
-          :options="camasFiltradas"
-          use-input
-          input-debounce="300"
-          @filter="filtrarCamas"
-          label="2. Seleccionar Cama Disponible *"
-          option-value="id"
-          :option-label="(cama) => `Cama: ${cama.nombre} - Tipo: ${cama.tipo}`"
-          emit-value
-          map-options
-          :rules="[(val) => !!val || 'Debe seleccionar una cama']"
-          reactive-rules
-          :disable="!selectedSala"
-          :loading="isLoadingCamas"
-          class="input-field"
-          @update:model-value="validarCama"
-          :error="errorCama !== ''"
-          :error-message="errorCama"
-        >
-          <template v-slot:prepend>
-            <q-icon name="bed" color="teal" />
-          </template>
-          <template v-slot:hint>
-            <span v-if="!selectedSala" class="text-orange-8">
-              <q-icon name="warning" size="14px" />
-              Primero debe seleccionar una sala
-            </span>
-            <span v-else class="text-teal-8">
-              <q-icon name="check_circle" size="14px" />
-              Camas disponibles en {{ getNombreSala(selectedSala) }}
-            </span>
-          </template>
-          <template v-slot:no-option>
-            <q-item>
-              <q-item-section class="text-grey">
-                <div class="text-center q-pa-md">
-                  <q-icon name="bed" size="48px" color="grey-5" />
-                  <div class="q-mt-sm">
-                    {{
-                      selectedSala
-                        ? 'No hay camas disponibles en esta sala'
-                        : 'Seleccione una sala primero'
-                    }}
+          <q-select
+            outlined
+            v-model="admisionForm.paciente_id"
+            use-input
+            input-debounce="300"
+            label="Buscar paciente por nombre o CI *"
+            :options="pacientesFiltrados"
+            @filter="filtrarPacientes"
+            option-value="id"
+            :option-label="
+              (paciente) => `${paciente.nombre} ${paciente.apellidos} - CI: ${paciente.ci}`
+            "
+            emit-value
+            map-options
+            :rules="[(val) => !!val || 'Debe seleccionar un paciente']"
+            reactive-rules
+            :loading="isLoadingPacientes"
+            class="input-field"
+            @update:model-value="validarPaciente"
+            :error="errorPaciente !== ''"
+            :error-message="errorPaciente"
+          >
+            <template v-slot:prepend>
+              <q-icon name="person_search" color="teal" />
+            </template>
+            <template v-slot:no-option>
+              <q-item>
+                <q-item-section class="text-grey">
+                  <div class="text-center q-pa-md">
+                    <q-icon name="search_off" size="48px" color="grey-5" />
+                    <div class="q-mt-sm">No se encontraron pacientes</div>
                   </div>
-                </div>
-              </q-item-section>
-            </q-item>
-          </template>
-        </q-select>
-      </div>
-
-      <!-- DETALLES DEL INGRESO -->
-      <div class="form-section">
-        <div class="section-title">
-          <q-icon name="description" size="20px" class="q-mr-xs" />
-          Detalles del Ingreso
+                </q-item-section>
+              </q-item>
+            </template>
+            <template v-slot:hint>
+              <span class="text-teal-8">
+                <q-icon name="info" size="14px" />
+                Escriba para buscar o seleccione de la lista
+              </span>
+            </template>
+          </q-select>
         </div>
 
-        <q-input
-          outlined
-          v-model="admisionForm.motivo"
-          label="Motivo de Ingreso *"
-          :rules="[
-            (val) => !!val || 'El motivo es requerido',
-            (val) => val.length >= 5 || 'Ingrese al menos 5 caracteres',
-          ]"
-          reactive-rules
-          class="input-field q-mb-md"
-          @update:model-value="validarMotivo"
-          :error="errorMotivo !== ''"
-          :error-message="errorMotivo"
-        >
-          <template v-slot:prepend>
-            <q-icon name="assignment" color="teal" />
-          </template>
-          <template v-slot:hint>Ej: Dolor abdominal agudo, fractura de brazo</template>
-        </q-input>
+        <!-- SELECCIONAR MÉDICO RESPONSABLE -->
+        <div class="form-section">
+          <div class="section-title">
+            <q-icon name="medical_information" size="20px" class="q-mr-xs" />
+            Asignación de Profesional
+          </div>
 
-        <q-input
-          outlined
-          v-model="admisionForm.diagnostico"
-          label="Diagnóstico Inicial *"
-          :rules="[
-            (val) => !!val || 'El diagnóstico es requerido',
-            (val) => val.length >= 5 || 'Ingrese al menos 5 caracteres',
-          ]"
-          reactive-rules
-          class="input-field q-mb-md"
-          @update:model-value="validarDiagnostico"
-          :error="errorDiagnostico !== ''"
-          :error-message="errorDiagnostico"
-        >
-          <template v-slot:prepend>
-            <q-icon name="medical_services" color="teal" />
-          </template>
-          <template v-slot:hint>Ej: Apendicitis aguda, fractura de radio</template>
-        </q-input>
+          <q-select
+            outlined
+            v-model="admisionForm.medico_id"
+            :options="medicosFiltrados"
+            use-input
+            input-debounce="300"
+            @filter="filtrarMedicos"
+            label="Médico Responsable *"
+            option-value="id"
+            emit-value
+            map-options
+            :rules="[(val) => !!val || 'Debe asignar un médico']"
+            reactive-rules
+            :loading="isLoadingMedicos"
+            class="input-field"
+            @update:model-value="validarMedico"
+            :error="errorMedico !== ''"
+            :error-message="errorMedico"
+          >
+            <template v-slot:prepend>
+              <q-icon name="medical_information" color="teal" />
+            </template>
+            <template v-slot:selected>
+              <div v-if="admisionForm.medico_id">
+                {{ getNombreMedico(admisionForm.medico_id) }}
+              </div>
+            </template>
+            <template v-slot:option="scope">
+              <q-item v-bind="scope.itemProps">
+                <q-item-section>
+                  <q-item-label>{{ scope.opt.nombre }} {{ scope.opt.apellidos }}</q-item-label>
+                  <q-item-label caption
+                    >{{ scope.opt.pacientes_activos_count }} pacientes activos</q-item-label
+                  >
+                </q-item-section>
+              </q-item>
+            </template>
+            <template v-slot:no-option>
+              <q-item>
+                <q-item-section class="text-grey">
+                  <div class="text-center q-pa-md">
+                    <q-icon name="search_off" size="48px" color="grey-5" />
+                    <div class="q-mt-sm">No se encontraron médicos</div>
+                  </div>
+                </q-item-section>
+              </q-item>
+            </template>
+            <template v-slot:hint>
+              <span class="text-teal-8">
+                <q-icon name="info" size="14px" />
+                Seleccione el médico responsable del paciente
+              </span>
+            </template>
+          </q-select>
+        </div>
 
-        <q-input
-          outlined
-          v-model="admisionForm.observaciones"
-          type="textarea"
-          rows="3"
-          label="Observaciones (Opcional)"
-          class="input-field"
-          counter
-          maxlength="500"
-        >
-          <template v-slot:prepend>
-            <q-icon name="notes" color="teal" />
-          </template>
-          <template v-slot:hint>Agregue información adicional relevante</template>
-        </q-input>
+        <!-- ASIGNACIÓN DE CAMA - Ocupa 2 columnas en desktop -->
+        <div class="form-section form-section-full">
+          <div class="section-title">
+            <q-icon name="bed" size="20px" class="q-mr-xs" />
+            Asignación de Cama
+          </div>
+
+          <!-- Grid de 2 columnas para sala y cama -->
+          <div class="cama-grid">
+            <q-select
+              outlined
+              v-model="selectedSala"
+              :options="salasFiltradas"
+              use-input
+              input-debounce="300"
+              @filter="filtrarSalas"
+              option-value="id"
+              :option-label="
+                (sala) =>
+                  `${sala.nombre} (${sala.especialidad ? sala.especialidad.nombre : 'Sin especialidad'})`
+              "
+              emit-value
+              map-options
+              label="1. Seleccionar Sala *"
+              :rules="[(val) => !!val || 'Seleccione una sala']"
+              reactive-rules
+              class="input-field"
+              @update:model-value="validarSala"
+              :error="errorSala !== ''"
+              :error-message="errorSala"
+            >
+              <template v-slot:prepend>
+                <q-icon name="meeting_room" color="teal" />
+              </template>
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    <div class="text-center q-pa-md">
+                      <q-icon name="search_off" size="48px" color="grey-5" />
+                      <div class="q-mt-sm">No se encontraron salas</div>
+                    </div>
+                  </q-item-section>
+                </q-item>
+              </template>
+              <template v-slot:hint>
+                <span class="text-teal-8">
+                  <q-icon name="info" size="14px" />
+                  Seleccione la sala
+                </span>
+              </template>
+            </q-select>
+
+            <q-select
+              outlined
+              v-model="admisionForm.cama_id"
+              :options="camasFiltradas"
+              use-input
+              input-debounce="300"
+              @filter="filtrarCamas"
+              label="2. Seleccionar Cama *"
+              option-value="id"
+              :option-label="(cama) => `Cama: ${cama.nombre} - Tipo: ${cama.tipo}`"
+              emit-value
+              map-options
+              :rules="[(val) => !!val || 'Debe seleccionar una cama']"
+              reactive-rules
+              :disable="!selectedSala"
+              :loading="isLoadingCamas"
+              class="input-field"
+              @update:model-value="validarCama"
+              :error="errorCama !== ''"
+              :error-message="errorCama"
+            >
+              <template v-slot:prepend>
+                <q-icon name="bed" color="teal" />
+              </template>
+              <template v-slot:hint>
+                <span v-if="!selectedSala" class="text-orange-8">
+                  <q-icon name="warning" size="14px" />
+                  Primero seleccione una sala
+                </span>
+                <span v-else class="text-teal-8">
+                  <q-icon name="check_circle" size="14px" />
+                  Camas disponibles en {{ getNombreSala(selectedSala) }}
+                </span>
+              </template>
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    <div class="text-center q-pa-md">
+                      <q-icon name="bed" size="48px" color="grey-5" />
+                      <div class="q-mt-sm">
+                        {{
+                          selectedSala
+                            ? 'No hay camas disponibles en esta sala'
+                            : 'Seleccione una sala primero'
+                        }}
+                      </div>
+                    </div>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+          </div>
+        </div>
+
+        <!-- DETALLES DEL INGRESO - Ocupa 2 columnas en desktop -->
+        <div class="form-section form-section-full">
+          <div class="section-title">
+            <q-icon name="description" size="20px" class="q-mr-xs" />
+            Detalles del Ingreso
+          </div>
+
+          <!-- Grid de 2 columnas para motivo y diagnostico -->
+          <div class="detalles-grid">
+            <q-input
+              outlined
+              v-model="admisionForm.motivo"
+              label="Motivo de Ingreso *"
+              :rules="[
+                (val) => !!val || 'El motivo es requerido',
+                (val) => val.length >= 5 || 'Ingrese al menos 5 caracteres',
+              ]"
+              reactive-rules
+              class="input-field"
+              @update:model-value="validarMotivo"
+              :error="errorMotivo !== ''"
+              :error-message="errorMotivo"
+            >
+              <template v-slot:prepend>
+                <q-icon name="assignment" color="teal" />
+              </template>
+              <template v-slot:hint>Ej: Dolor abdominal agudo</template>
+            </q-input>
+
+            <q-input
+              outlined
+              v-model="admisionForm.diagnostico"
+              label="Diagnóstico Inicial *"
+              :rules="[
+                (val) => !!val || 'El diagnóstico es requerido',
+                (val) => val.length >= 5 || 'Ingrese al menos 5 caracteres',
+              ]"
+              reactive-rules
+              class="input-field"
+              @update:model-value="validarDiagnostico"
+              :error="errorDiagnostico !== ''"
+              :error-message="errorDiagnostico"
+            >
+              <template v-slot:prepend>
+                <q-icon name="medical_services" color="teal" />
+              </template>
+              <template v-slot:hint>Ej: Apendicitis aguda</template>
+            </q-input>
+          </div>
+
+          <q-input
+            outlined
+            v-model="admisionForm.observaciones"
+            type="textarea"
+            rows="3"
+            label="Observaciones (Opcional)"
+            class="input-field q-mt-md"
+            counter
+            maxlength="500"
+          >
+            <template v-slot:prepend>
+              <q-icon name="notes" color="teal" />
+            </template>
+            <template v-slot:hint>Agregue información adicional relevante</template>
+          </q-input>
+        </div>
       </div>
 
       <q-stepper-navigation class="form-actions">
@@ -322,13 +331,11 @@ export default defineComponent({
       observaciones: '',
     })
 
-    // Listas completas
     const pacientesCompletos = ref([])
     const medicosCompletos = ref([])
     const salasCompletas = ref([])
     const camasDisponibles = ref([])
 
-    // Listas filtradas
     const pacientesFiltrados = ref([])
     const medicosFiltrados = ref([])
     const salasFiltradas = ref([])
@@ -337,12 +344,10 @@ export default defineComponent({
     const selectedSala = ref(null)
     const datosParaRestaurar = ref(null)
 
-    // Estados de carga
     const isLoadingPacientes = ref(false)
     const isLoadingMedicos = ref(false)
     const isLoadingCamas = ref(false)
 
-    // Estados de validación en tiempo real
     const errorPaciente = ref('')
     const errorMedico = ref('')
     const errorSala = ref('')
@@ -350,7 +355,6 @@ export default defineComponent({
     const errorMotivo = ref('')
     const errorDiagnostico = ref('')
 
-    // Computed para validar si el formulario está completo
     const formularioValido = computed(() => {
       return (
         admisionForm.paciente_id &&
@@ -369,12 +373,10 @@ export default defineComponent({
       )
     })
 
-    // ✅ WATCH para restaurar datos guardados
     watch(
       () => props.datosIniciales,
       (newDatos) => {
         if (newDatos) {
-          console.log('📥 Datos recibidos para restaurar:', newDatos)
           datosParaRestaurar.value = newDatos
           restaurarDatos()
         }
@@ -382,35 +384,24 @@ export default defineComponent({
       { immediate: true, deep: true },
     )
 
-    // ✅ WATCH para detectar cuando las salas están cargadas
     watch(salasCompletas, () => {
       if (salasCompletas.value.length > 0 && datosParaRestaurar.value) {
-        console.log('📥 Salas cargadas, restaurando datos...')
         restaurarDatos()
       }
     })
 
-    // Función para restaurar datos
     async function restaurarDatos() {
       const newDatos = datosParaRestaurar.value
-
       if (!newDatos) return
 
-      console.log('📥 Restaurando datos de admisión:', newDatos)
-
-      // Copiar todos los datos básicos
       admisionForm.paciente_id = newDatos.paciente_id
       admisionForm.medico_id = newDatos.medico_id
       admisionForm.motivo = newDatos.motivo || ''
       admisionForm.diagnostico = newDatos.diagnostico || ''
       admisionForm.observaciones = newDatos.observaciones || ''
 
-      // Si hay cama_id y las salas están cargadas, buscar la sala correspondiente
       if (newDatos.cama_id && salasCompletas.value.length > 0) {
         try {
-          let camaEncontrada = false
-
-          // Buscar la sala correspondiente a la cama
           for (const sala of salasCompletas.value) {
             const response = await api.get('/camas-disponibles', {
               params: { sala_id: sala.id },
@@ -421,21 +412,14 @@ export default defineComponent({
               camasDisponibles.value = response.data
               camasFiltradas.value = response.data
               admisionForm.cama_id = newDatos.cama_id
-              camaEncontrada = true
-              console.log('✅ Cama y sala restauradas:', { sala: sala.id, cama: newDatos.cama_id })
               break
             }
           }
-
-          if (!camaEncontrada) {
-            console.warn('⚠️ No se encontró la sala para la cama:', newDatos.cama_id)
-          }
         } catch (error) {
-          console.error('❌ Error al restaurar sala de la cama:', error)
+          console.error('Error al restaurar sala de la cama:', error)
         }
       }
 
-      // Limpiar errores
       errorPaciente.value = ''
       errorMedico.value = ''
       errorSala.value = ''
@@ -451,7 +435,6 @@ export default defineComponent({
     })
 
     watch(selectedSala, (newId, oldId) => {
-      // Solo limpiar si NO estamos restaurando datos Y la sala cambió realmente
       const estaRestaurando = datosParaRestaurar.value && datosParaRestaurar.value.cama_id
 
       if (!estaRestaurando && oldId !== undefined) {
@@ -467,37 +450,20 @@ export default defineComponent({
       }
     })
 
-    // Funciones de validación en tiempo real
     const validarPaciente = (value) => {
-      if (!value) {
-        errorPaciente.value = 'Debe seleccionar un paciente'
-      } else {
-        errorPaciente.value = ''
-      }
+      errorPaciente.value = !value ? 'Debe seleccionar un paciente' : ''
     }
 
     const validarMedico = (value) => {
-      if (!value) {
-        errorMedico.value = 'Debe asignar un médico'
-      } else {
-        errorMedico.value = ''
-      }
+      errorMedico.value = !value ? 'Debe asignar un médico' : ''
     }
 
     const validarSala = (value) => {
-      if (!value) {
-        errorSala.value = 'Debe seleccionar una sala'
-      } else {
-        errorSala.value = ''
-      }
+      errorSala.value = !value ? 'Debe seleccionar una sala' : ''
     }
 
     const validarCama = (value) => {
-      if (!value) {
-        errorCama.value = 'Debe seleccionar una cama'
-      } else {
-        errorCama.value = ''
-      }
+      errorCama.value = !value ? 'Debe seleccionar una cama' : ''
     }
 
     const validarMotivo = (value) => {
@@ -520,15 +486,13 @@ export default defineComponent({
       }
     }
 
-    // Cargar datos iniciales
     async function cargarPacientes() {
       isLoadingPacientes.value = true
       try {
         const response = await api.get('/pacientes/buscar', { params: { termino: '' } })
         pacientesCompletos.value = response.data
         pacientesFiltrados.value = response.data
-      } catch (error) {
-        console.error('Error cargando pacientes:', error)
+      } catch  {
         Notify.create({
           type: 'negative',
           message: 'No se pudieron cargar los pacientes',
@@ -545,8 +509,7 @@ export default defineComponent({
         const response = await api.get('/salas')
         salasCompletas.value = response.data
         salasFiltradas.value = response.data
-      } catch (error) {
-        console.error('Error cargando salas:', error)
+      } catch  {
         Notify.create({
           type: 'negative',
           message: 'No se pudieron cargar las salas',
@@ -562,8 +525,7 @@ export default defineComponent({
         const response = await api.get('/camas-disponibles', { params: { sala_id: salaId } })
         camasDisponibles.value = response.data
         camasFiltradas.value = response.data
-      } catch (error) {
-        console.error('Error cargando camas:', error)
+      } catch  {
         Notify.create({
           type: 'negative',
           message: 'No se pudieron cargar las camas disponibles',
@@ -581,8 +543,7 @@ export default defineComponent({
         const response = await api.get('/medicos-activos')
         medicosCompletos.value = response.data
         medicosFiltrados.value = response.data
-      } catch (error) {
-        console.error('Error cargando médicos:', error)
+      } catch  {
         Notify.create({
           type: 'negative',
           message: 'No se pudo cargar la lista de médicos',
@@ -594,7 +555,6 @@ export default defineComponent({
       }
     }
 
-    // Funciones de filtrado
     const filtrarPacientes = (val, update) => {
       update(() => {
         if (val === '') {
@@ -691,14 +651,12 @@ export default defineComponent({
         observaciones: '',
       })
       selectedSala.value = null
-
       errorPaciente.value = ''
       errorMedico.value = ''
       errorSala.value = ''
       errorCama.value = ''
       errorMotivo.value = ''
       errorDiagnostico.value = ''
-
       pacientesFiltrados.value = pacientesCompletos.value
       medicosFiltrados.value = medicosCompletos.value
       salasFiltradas.value = salasCompletas.value
@@ -746,18 +704,26 @@ export default defineComponent({
 <style scoped>
 .datos-admision-form {
   padding: 0;
+  width: 100%;
 }
 
 .form-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: clamp(16px, 3vw, 24px);
+}
+
+/* Grid principal de 2 columnas en desktop */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(16px, 3vw, 24px);
 }
 
 .form-section {
   background: #f8fafc;
   border-radius: 12px;
-  padding: 20px;
+  padding: clamp(16px, 3vw, 20px);
   border: 2px solid #e2e8f0;
   transition: all 0.3s ease;
 }
@@ -767,15 +733,34 @@ export default defineComponent({
   box-shadow: 0 2px 8px rgba(20, 184, 166, 0.1);
 }
 
+/* Secciones que ocupan 2 columnas */
+.form-section-full {
+  grid-column: 1 / -1;
+}
+
 .section-title {
-  font-size: 1.1rem;
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
   font-weight: 600;
   color: #0d9488;
-  margin-bottom: 16px;
+  margin-bottom: clamp(12px, 2vw, 16px);
   padding-bottom: 8px;
   border-bottom: 2px solid #ccfbf1;
   display: flex;
   align-items: center;
+}
+
+/* Grid para camas - 2 columnas */
+.cama-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(12px, 2vw, 16px);
+}
+
+/* Grid para detalles - 2 columnas */
+.detalles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(12px, 2vw, 16px);
 }
 
 .input-field {
@@ -796,16 +781,9 @@ export default defineComponent({
 }
 
 @keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-4px);
-  }
-  75% {
-    transform: translateX(4px);
-  }
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
 }
 
 .input-field :deep(.q-field__messages) {
@@ -830,9 +808,9 @@ export default defineComponent({
 
 .btn-continuar {
   width: 100%;
-  padding: 12px 24px;
+  padding: clamp(10px, 2vw, 12px) clamp(20px, 4vw, 24px);
   font-weight: 700;
-  font-size: 1rem;
+  font-size: clamp(0.9rem, 2vw, 1rem);
   background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
   box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
   transition: all 0.3s ease;
@@ -848,9 +826,21 @@ export default defineComponent({
   cursor: not-allowed;
 }
 
+/* Responsive - colapsar a 1 columna en tablet/mobile */
+@media (max-width: 1024px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-section-full {
+    grid-column: 1;
+  }
+}
+
 @media (max-width: 768px) {
-  .form-section {
-    padding: 16px;
+  .cama-grid,
+  .detalles-grid {
+    grid-template-columns: 1fr;
   }
 
   .section-title {

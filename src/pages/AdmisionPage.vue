@@ -1,222 +1,226 @@
 <template>
-  <q-page class="page-background">
-    <div class="page-container">
-      <!-- Header elegante -->
-      <div class="page-header">
-        <div class="header-content">
-          <q-icon name="local_hospital" size="48px" class="header-icon" />
-          <div class="header-text">
-            <h1 class="page-title">Nueva Admisión de Paciente</h1>
-            <p class="page-subtitle">Complete los siguientes pasos para registrar la internación</p>
-          </div>
-        </div>
-        <div class="progress-indicator">
-          <span class="step-counter">Paso {{ step }} de 4</span>
-          <q-linear-progress
-            :value="step / 4"
-            color="teal"
-            size="8px"
-            rounded
-            class="progress-bar"
-          />
+  <q-page class="page-background" padding>
+    <!-- Eliminado page-container con max-width, ahora usa todo el ancho -->
+    <!-- Header elegante - Ahora full width -->
+    <div class="page-header">
+      <div class="header-content">
+        <q-icon name="local_hospital" size="48px" class="header-icon" />
+        <div class="header-text">
+          <h1 class="page-title">Nueva Admisión de Paciente</h1>
+          <p class="page-subtitle">Complete los siguientes pasos para registrar la internación</p>
         </div>
       </div>
-
-      <!-- Stepper mejorado -->
-      <q-stepper
-        v-model="step"
-        ref="stepper"
-        color="teal"
-        animated
-        header-nav
-        flat
-        class="styled-stepper"
-      >
-        <!-- Paso 1: Datos de Admisión -->
-        <q-step
-          :name="1"
-          title="Datos de Admisión"
-          icon="assignment_ind"
-          :done="step > 1"
-          active-icon="edit"
-          done-icon="check"
-          class="step-section"
-        >
-          <div class="step-content">
-            <div class="step-header">
-              <q-icon name="assignment_ind" size="32px" color="teal" />
-              <div>
-                <h3 class="step-title">Información de Admisión</h3>
-                <p class="step-description">
-                  Seleccione el paciente y configure los detalles de la internación
-                </p>
-              </div>
-            </div>
-            <DatosAdmisionForm
-              ref="admisionFormRef"
-              :datos-iniciales="datosDeAdmision"
-              @datos-listos="onDatosAdmisionListos"
-            />
-          </div>
-        </q-step>
-
-        <!-- Paso 2: Signos Vitales -->
-        <q-step
-          :name="2"
-          title="Signos Vitales"
-          icon="monitor_heart"
-          :done="step > 2"
-          active-icon="edit"
-          done-icon="check"
-          class="step-section"
-        >
-          <div class="step-content">
-            <div class="step-header">
-              <q-icon name="monitor_heart" size="32px" color="red-6" />
-              <div>
-                <h3 class="step-title">Registro de Signos Vitales Iniciales</h3>
-                <p class="step-description">
-                  Ingrese los valores actuales del paciente al momento de la admisión
-                </p>
-              </div>
-            </div>
-            <FormularioSignosVitales
-              ref="signosVitalesFormRef"
-              :signos-iniciales="datosDeSignosVitales"
-            />
-
-            <q-stepper-navigation class="step-navigation">
-              <q-btn
-                flat
-                @click="step = 1"
-                color="grey-7"
-                label="Atrás"
-                icon="arrow_back"
-                class="nav-btn nav-btn-back"
-              />
-              <q-btn
-                @click="onSignosListos"
-                color="teal"
-                label="Continuar"
-                icon-right="arrow_forward"
-                unelevated
-                class="nav-btn nav-btn-next"
-              />
-            </q-stepper-navigation>
-          </div>
-        </q-step>
-
-        <!-- Paso 3: Plan de Cuidados -->
-        <q-step
-          :name="3"
-          title="Plan de Cuidados"
-          icon="health_and_safety"
-          :done="step > 3"
-          active-icon="edit"
-          done-icon="check"
-          class="step-section"
-        >
-          <div class="step-content">
-            <div class="step-header">
-              <q-icon name="health_and_safety" size="32px" color="blue-6" />
-              <div>
-                <h3 class="step-title">Plan de Cuidados Inicial</h3>
-                <p class="step-description">
-                  Configure las tareas de enfermería que se realizarán de forma recurrente
-                  (Opcional)
-                </p>
-              </div>
-            </div>
-
-            <div class="optional-banner">
-              <q-icon name="info" size="24px" />
-              <div>
-                <strong>Paso opcional:</strong> Puede agregar planes de cuidado ahora o
-                configurarlos más tarde desde el panel del paciente.
-              </div>
-            </div>
-
-            <FormularioCuidados
-              ref="cuidadosFormRef"
-              :cuidados-iniciales="datosCuidados"
-              @update:cuidados="onCuidadosUpdate"
-            />
-
-            <q-stepper-navigation class="step-navigation">
-              <q-btn
-                flat
-                @click="step = 2"
-                color="grey-7"
-                label="Atrás"
-                icon="arrow_back"
-                class="nav-btn nav-btn-back"
-              />
-              <q-btn
-                unelevated
-                color="positive"
-                label="Finalizar y Guardar Admisión"
-                @click="finalizarAdmision"
-                :loading="isSaving"
-                icon-right="save"
-                class="nav-btn nav-btn-finish"
-              />
-            </q-stepper-navigation>
-          </div>
-        </q-step>
-
-        <!-- Paso 4: Completado -->
-        <q-step :name="4" title="Completado" icon="check_circle" class="step-section">
-          <div class="final-step-content">
-            <div class="success-animation">
-              <q-icon name="check_circle" color="positive" size="120px" class="success-icon" />
-              <div class="success-ring"></div>
-            </div>
-
-            <h2 class="success-title">¡Admisión Completada Exitosamente!</h2>
-            <p class="success-message">
-              El paciente ha sido internado correctamente. Los datos iniciales han sido registrados
-              en el sistema.
-            </p>
-
-            <div class="success-actions">
-              <q-btn
-                :to="`/pacientes/internacion/${nuevaInternacionId}`"
-                unelevated
-                label="Ver Panel del Paciente"
-                color="primary"
-                size="lg"
-                v-if="nuevaInternacionId"
-                icon="visibility"
-                class="action-btn primary-action"
-              />
-              <q-btn
-                flat
-                @click="reiniciarProceso"
-                label="Nueva Admisión"
-                color="teal"
-                size="lg"
-                icon="add_circle_outline"
-                class="action-btn secondary-action"
-              />
-            </div>
-
-            <div class="success-info">
-              <q-icon name="info_outline" size="20px" />
-              <span
-                >Puede continuar configurando tratamientos, alimentación y otros detalles desde el
-                panel del paciente</span
-              >
-            </div>
-          </div>
-        </q-step>
-      </q-stepper>
+      <div class="progress-indicator">
+        <span class="step-counter">Paso {{ step }} de 4</span>
+        <q-linear-progress
+          :value="step / 4"
+          color="teal"
+          size="8px"
+          rounded
+          class="progress-bar"
+        />
+      </div>
     </div>
+
+    <!-- Stepper mejorado - Full width -->
+    <q-stepper
+      v-model="step"
+      ref="stepper"
+      color="teal"
+      animated
+      header-nav
+      flat
+      class="styled-stepper"
+      keep-alive
+      :vertical="$q.screen.lt.md"
+    >
+      <!-- Paso 1: Datos de Admisión -->
+      <q-step
+        :name="1"
+        title="Datos de Admisión"
+        icon="assignment_ind"
+        :done="step > 1"
+        active-icon="edit"
+        done-icon="check"
+        class="step-section"
+      >
+        <div class="step-content">
+          <div class="step-header">
+            <q-icon name="assignment_ind" size="32px" color="teal" />
+            <div>
+              <h3 class="step-title">Información de Admisión</h3>
+              <p class="step-description">
+                Seleccione el paciente y configure los detalles de la internación
+              </p>
+            </div>
+          </div>
+          <DatosAdmisionForm
+            v-if="step === 1"
+            ref="admisionFormRef"
+            :datos-iniciales="datosDeAdmision"
+            @datos-listos="onDatosAdmisionListos"
+          />
+        </div>
+      </q-step>
+
+      <!-- Paso 2: Signos Vitales -->
+      <q-step
+        :name="2"
+        title="Signos Vitales"
+        icon="monitor_heart"
+        :done="step > 2"
+        active-icon="edit"
+        done-icon="check"
+        class="step-section"
+      >
+        <div class="step-content">
+          <div class="step-header">
+            <q-icon name="monitor_heart" size="32px" color="red-6" />
+            <div>
+              <h3 class="step-title">Registro de Signos Vitales Iniciales</h3>
+              <p class="step-description">
+                Ingrese los valores actuales del paciente al momento de la admisión
+              </p>
+            </div>
+          </div>
+          <FormularioSignosVitales
+            v-if="step === 2"
+            ref="signosVitalesFormRef"
+            :signos-iniciales="datosDeSignosVitales"
+          />
+
+          <q-stepper-navigation class="step-navigation">
+            <q-btn
+              flat
+              @click="retrocederPaso(1)"
+              color="grey-7"
+              label="Atrás"
+              icon="arrow_back"
+              class="nav-btn nav-btn-back"
+            />
+            <q-btn
+              @click="onSignosListos"
+              color="teal"
+              label="Continuar"
+              icon-right="arrow_forward"
+              unelevated
+              class="nav-btn nav-btn-next"
+            />
+          </q-stepper-navigation>
+        </div>
+      </q-step>
+
+      <!-- Paso 3: Plan de Cuidados -->
+      <q-step
+        :name="3"
+        title="Plan de Cuidados"
+        icon="health_and_safety"
+        :done="step > 3"
+        active-icon="edit"
+        done-icon="check"
+        class="step-section"
+      >
+        <div class="step-content">
+          <div class="step-header">
+            <q-icon name="health_and_safety" size="32px" color="blue-6" />
+            <div>
+              <h3 class="step-title">Plan de Cuidados Inicial</h3>
+              <p class="step-description">
+                Configure las tareas de enfermería que se realizarán de forma recurrente
+                (Opcional)
+              </p>
+            </div>
+          </div>
+
+          <div class="optional-banner">
+            <q-icon name="info" size="24px" />
+            <div>
+              <strong>Paso opcional:</strong> Puede agregar planes de cuidado ahora o
+              configurarlos más tarde desde el panel del paciente.
+            </div>
+          </div>
+
+          <FormularioCuidados
+            v-if="step === 3"
+            ref="cuidadosFormRef"
+            :cuidados-iniciales="datosCuidados"
+            @update:cuidados="onCuidadosUpdate"
+          />
+
+          <q-stepper-navigation class="step-navigation">
+            <q-btn
+              flat
+              @click="retrocederPaso(2)"
+              color="grey-7"
+              label="Atrás"
+              icon="arrow_back"
+              class="nav-btn nav-btn-back"
+            />
+            <q-btn
+              unelevated
+              color="positive"
+              label="Finalizar y Guardar Admisión"
+              @click="finalizarAdmision"
+              :loading="isSaving"
+              icon-right="save"
+              class="nav-btn nav-btn-finish"
+            />
+          </q-stepper-navigation>
+        </div>
+      </q-step>
+
+      <!-- Paso 4: Completado -->
+      <q-step :name="4" title="Completado" icon="check_circle" class="step-section">
+        <div class="final-step-content">
+          <div class="success-animation">
+            <q-icon name="check_circle" color="positive" size="120px" class="success-icon" />
+            <div class="success-ring"></div>
+          </div>
+
+          <h2 class="success-title">¡Admisión Completada Exitosamente!</h2>
+          <p class="success-message">
+            El paciente ha sido internado correctamente. Los datos iniciales han sido registrados
+            en el sistema.
+          </p>
+
+          <div class="success-actions">
+            <q-btn
+              :to="`/pacientes/internacion/${nuevaInternacionId}`"
+              unelevated
+              label="Ver Panel del Paciente"
+              color="primary"
+              size="lg"
+              v-if="nuevaInternacionId"
+              icon="visibility"
+              class="action-btn primary-action"
+            />
+            <q-btn
+              flat
+              @click="reiniciarProceso"
+              label="Nueva Admisión"
+              color="teal"
+              size="lg"
+              icon="add_circle_outline"
+              class="action-btn secondary-action"
+            />
+          </div>
+
+          <div class="success-info">
+            <q-icon name="info_outline" size="20px" />
+            <span
+              >Puede continuar configurando tratamientos, alimentación y otros detalles desde el
+              panel del paciente</span
+            >
+          </div>
+        </div>
+      </q-step>
+    </q-stepper>
   </q-page>
 </template>
 
 <script>
 import { defineComponent, ref } from 'vue'
-import { Notify } from 'quasar'
+import { Notify, useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 import DatosAdmisionForm from 'src/components/DatosAdmisionForm.vue'
 import FormularioSignosVitales from 'src/components/FormularioSignosVitales.vue'
@@ -230,6 +234,7 @@ export default defineComponent({
     FormularioCuidados,
   },
   setup() {
+    const $q = useQuasar()
     const step = ref(1)
     const stepper = ref(null)
     const isSaving = ref(false)
@@ -244,15 +249,9 @@ export default defineComponent({
     const nuevaInternacionId = ref(null)
 
     function onDatosAdmisionListos(formData) {
-      console.log('✅ Datos de admisión recibidos:', formData)
-
-      // ✅ CLAVE: Guardamos una COPIA del objeto para evitar referencias reactivas
-      datosDeAdmision.value = { ...formData }
-
-      console.log('✅ Datos almacenados en datosDeAdmision.value:', datosDeAdmision.value)
-
-      stepper.value.next()
-
+      console.log('Datos de admisión recibidos:', formData)
+      datosDeAdmision.value = JSON.parse(JSON.stringify(formData))
+      step.value = 2
       Notify.create({
         type: 'positive',
         message: 'Datos de admisión guardados correctamente',
@@ -264,22 +263,15 @@ export default defineComponent({
 
     async function onSignosListos() {
       if (!signosVitalesFormRef.value) {
-        console.error('❌ Ref de signos vitales no disponible')
+        console.error('Ref de signos vitales no disponible')
         return
       }
 
       const { datos, esValido } = await signosVitalesFormRef.value.validarYObtenerDatos()
 
-      console.log('📊 Validación de signos vitales:', { datos, esValido })
-
       if (esValido) {
-        // ✅ CLAVE: Guardamos una COPIA del array
-        datosDeSignosVitales.value = [...datos]
-
-        console.log('✅ Signos vitales almacenados:', datosDeSignosVitales.value)
-
-        stepper.value.next()
-
+        datosDeSignosVitales.value = JSON.parse(JSON.stringify(datos))
+        step.value = 3
         Notify.create({
           type: 'positive',
           message: 'Signos vitales registrados correctamente',
@@ -299,24 +291,21 @@ export default defineComponent({
     }
 
     function onCuidadosUpdate(cuidados) {
-      console.log('🩺 Cuidados actualizados:', cuidados)
+      datosCuidados.value = JSON.parse(JSON.stringify(cuidados))
+    }
 
-      // ✅ CLAVE: Guardamos una COPIA del array
-      datosCuidados.value = [...cuidados]
-
-      console.log('✅ Cuidados almacenados:', datosCuidados.value)
+    async function retrocederPaso(pasoDestino) {
+      if (step.value === 2 && signosVitalesFormRef.value) {
+        const { datos } = await signosVitalesFormRef.value.validarYObtenerDatos()
+        if (datos && datos.length > 0) {
+          datosDeSignosVitales.value = JSON.parse(JSON.stringify(datos))
+        }
+      }
+      step.value = pasoDestino
     }
 
     async function finalizarAdmision() {
-      console.log('🚀 Iniciando proceso de finalización...')
-      console.log('📋 Estado actual de los datos:')
-      console.log('  - datosDeAdmision:', datosDeAdmision.value)
-      console.log('  - datosDeSignosVitales:', datosDeSignosVitales.value)
-      console.log('  - datosCuidados:', datosCuidados.value)
-
-      // ✅ Validación mejorada
       if (!datosDeAdmision.value) {
-        console.error('❌ Faltan datos de admisión')
         Notify.create({
           type: 'negative',
           message: 'Faltan datos de admisión. Por favor, retroceda y complete el formulario.',
@@ -324,11 +313,11 @@ export default defineComponent({
           position: 'top',
           timeout: 4000,
         })
+        step.value = 1
         return
       }
 
       if (!datosDeSignosVitales.value || datosDeSignosVitales.value.length === 0) {
-        console.error('❌ Faltan signos vitales')
         Notify.create({
           type: 'negative',
           message: 'Faltan signos vitales. Por favor, retroceda y complete el registro.',
@@ -336,14 +325,20 @@ export default defineComponent({
           position: 'top',
           timeout: 4000,
         })
+        step.value = 2
         return
       }
 
-      // ✅ CONVERTIR MEDIDAS A STRING (el backend lo requiere así)
-      const signosVitalesFormateados = datosDeSignosVitales.value.map((signo) => ({
-        signo_id: signo.signo_id,
-        medida: String(signo.medida), // Convertir a string
-      }))
+      const signosVitalesFormateados = datosDeSignosVitales.value.map((signo) => {
+        const signoFormateado = {
+          signo_id: signo.signo_id,
+          medida: String(signo.medida),
+        }
+        if (signo.medida_baja !== null && signo.medida_baja !== undefined && signo.medida_baja !== '') {
+          signoFormateado.medida_baja = String(signo.medida_baja)
+        }
+        return signoFormateado
+      })
 
       const payload = {
         admision: datosDeAdmision.value,
@@ -351,17 +346,11 @@ export default defineComponent({
         cuidados: datosCuidados.value || [],
       }
 
-      console.log('📤 Payload a enviar:', JSON.stringify(payload, null, 2))
-
       isSaving.value = true
 
       try {
         const response = await api.post('/admisiones', payload)
-
-        console.log('✅ Respuesta del servidor:', response.data)
-
         nuevaInternacionId.value = response.data.data.id
-
         Notify.create({
           type: 'positive',
           message: response.data.message || 'Admisión registrada con éxito',
@@ -369,20 +358,9 @@ export default defineComponent({
           position: 'top',
           timeout: 3000,
         })
-
         step.value = 4
       } catch (error) {
-        console.error('❌ Error completo:', error)
-        console.error('❌ Response data:', error.response?.data)
-        console.error('❌ Response status:', error.response?.status)
-
         const msg = error.response?.data?.message || 'Ocurrió un error al guardar la admisión'
-
-        // Mostrar errores de validación si existen
-        if (error.response?.data?.errors) {
-          console.error('❌ Errores de validación:', error.response.data.errors)
-        }
-
         Notify.create({
           type: 'negative',
           message: msg,
@@ -401,9 +379,6 @@ export default defineComponent({
       datosCuidados.value = []
       nuevaInternacionId.value = null
       step.value = 1
-
-      if (admisionFormRef.value) admisionFormRef.value.reset()
-
       Notify.create({
         type: 'info',
         message: 'Listo para una nueva admisión',
@@ -414,16 +389,21 @@ export default defineComponent({
     }
 
     return {
+      $q,
       step,
       stepper,
       isSaving,
       admisionFormRef,
       signosVitalesFormRef,
       cuidadosFormRef,
+      datosDeAdmision,
+      datosDeSignosVitales,
+      datosCuidados,
       nuevaInternacionId,
       onDatosAdmisionListos,
       onSignosListos,
       onCuidadosUpdate,
+      retrocederPaso,
       finalizarAdmision,
       reiniciarProceso,
     }
@@ -432,23 +412,17 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* Eliminado max-width, ahora full responsive */
 .page-background {
   background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
   min-height: 100vh;
-  padding: 24px;
 }
 
-.page-container {
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-/* Header elegante */
 .page-header {
   background: white;
   border-radius: 16px;
-  padding: 32px;
-  margin-bottom: 32px;
+  padding: clamp(16px, 4vw, 32px);
+  margin-bottom: clamp(16px, 4vw, 32px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   border: 2px solid #e2e8f0;
 }
@@ -456,20 +430,23 @@ export default defineComponent({
 .header-content {
   display: flex;
   align-items: center;
-  gap: 20px;
-  margin-bottom: 24px;
+  gap: clamp(12px, 3vw, 20px);
+  margin-bottom: clamp(16px, 4vw, 24px);
+  flex-wrap: wrap;
 }
 
 .header-icon {
   background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
   color: white;
-  padding: 16px;
+  padding: clamp(12px, 3vw, 16px);
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+  flex-shrink: 0;
 }
 
 .header-text {
   flex: 1;
+  min-width: 200px;
 }
 
 .page-title {
@@ -478,14 +455,14 @@ export default defineComponent({
   background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 900;
-  font-size: 2rem;
+  font-size: clamp(1.25rem, 4vw, 2rem);
   margin: 0 0 8px 0;
   line-height: 1.2;
 }
 
 .page-subtitle {
   color: #64748b;
-  font-size: 1rem;
+  font-size: clamp(0.875rem, 2vw, 1rem);
   margin: 0;
 }
 
@@ -496,7 +473,7 @@ export default defineComponent({
 }
 
 .step-counter {
-  font-size: 0.9rem;
+  font-size: clamp(0.8rem, 2vw, 0.9rem);
   font-weight: 600;
   color: #0d9488;
   text-align: center;
@@ -506,7 +483,6 @@ export default defineComponent({
   transition: all 0.3s ease;
 }
 
-/* Stepper estilizado */
 .styled-stepper {
   background: white;
   border-radius: 16px;
@@ -515,106 +491,75 @@ export default defineComponent({
   overflow: hidden;
 }
 
-.styled-stepper :deep(.q-stepper__header) {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-bottom: 2px solid #e2e8f0;
-  padding: 16px;
-}
-
-.styled-stepper :deep(.q-stepper__tab) {
-  padding: 16px 24px;
-  transition: all 0.3s ease;
-  border-radius: 12px;
-  margin: 0 8px;
-}
-
-.styled-stepper :deep(.q-stepper__tab:hover) {
-  background: rgba(20, 184, 166, 0.1);
-}
-
-.styled-stepper :deep(.q-stepper__tab--active) {
-  background: linear-gradient(135deg, #ccfbf1 0%, #a7f3d0 100%);
-}
-
-.styled-stepper :deep(.q-stepper__tab--done) {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-}
-
-.styled-stepper :deep(.q-stepper__dot) {
-  width: 40px;
-  height: 40px;
-  font-size: 20px;
-}
-
-.styled-stepper :deep(.q-stepper__label) {
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-/* Contenido de cada paso */
+/* Step content ahora es full width */
 .step-content {
-  padding: 32px;
+  padding: clamp(16px, 4vw, 32px);
   min-height: 400px;
 }
 
 .step-header {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 32px;
-  padding-bottom: 24px;
+  align-items: flex-start;
+  gap: clamp(12px, 3vw, 16px);
+  margin-bottom: clamp(20px, 4vw, 32px);
+  padding-bottom: clamp(16px, 4vw, 24px);
   border-bottom: 2px solid #e2e8f0;
+  flex-wrap: wrap;
 }
 
 .step-title {
-  font-size: 1.5rem;
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
   font-weight: 700;
   color: #1e293b;
   margin: 0 0 4px 0;
 }
 
 .step-description {
-  font-size: 0.95rem;
+  font-size: clamp(0.85rem, 2vw, 0.95rem);
   color: #64748b;
   margin: 0;
 }
 
-/* Banner informativo */
 .optional-banner {
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   border-left: 4px solid #f59e0b;
   border-radius: 8px;
-  padding: 16px 20px;
+  padding: clamp(12px, 3vw, 16px) clamp(16px, 4vw, 20px);
   display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
+  align-items: flex-start;
+  gap: clamp(12px, 3vw, 16px);
+  margin-bottom: clamp(16px, 4vw, 24px);
   color: #92400e;
+  flex-wrap: wrap;
 }
 
 .optional-banner strong {
   font-weight: 700;
 }
 
-/* Navegación de pasos */
+/* Navegacion responsiva mejorada */
 .step-navigation {
   display: flex;
   justify-content: space-between;
-  padding-top: 32px;
-  margin-top: 32px;
+  padding-top: clamp(20px, 4vw, 32px);
+  margin-top: clamp(20px, 4vw, 32px);
   border-top: 2px solid #e2e8f0;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .nav-btn {
   font-weight: 600;
-  padding: 12px 32px;
-  font-size: 1rem;
+  padding: clamp(10px, 2vw, 12px) clamp(20px, 4vw, 32px);
+  font-size: clamp(0.875rem, 2vw, 1rem);
   transition: all 0.3s ease;
+  flex: 1;
+  min-width: 140px;
 }
 
 .nav-btn-back {
   border: 2px solid #e2e8f0;
+  max-width: 200px;
 }
 
 .nav-btn-back:hover {
@@ -635,8 +580,8 @@ export default defineComponent({
 .nav-btn-finish {
   background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
   box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
-  flex: 1;
-  max-width: 400px;
+  flex: 2;
+  max-width: none;
 }
 
 .nav-btn-finish:hover {
@@ -644,20 +589,19 @@ export default defineComponent({
   box-shadow: 0 6px 16px rgba(22, 163, 74, 0.4);
 }
 
-/* Paso final - Completado */
 .final-step-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 64px 32px;
+  padding: clamp(32px, 6vw, 64px) clamp(16px, 4vw, 32px);
   min-height: 500px;
   text-align: center;
 }
 
 .success-animation {
   position: relative;
-  margin-bottom: 32px;
+  margin-bottom: clamp(20px, 4vw, 32px);
 }
 
 .success-icon {
@@ -679,13 +623,8 @@ export default defineComponent({
 }
 
 @keyframes successPulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 
 @keyframes ringExpand {
@@ -700,33 +639,37 @@ export default defineComponent({
 }
 
 .success-title {
-  font-size: 2rem;
+  font-size: clamp(1.25rem, 4vw, 2rem);
   font-weight: 700;
   color: #059669;
   margin: 0 0 16px 0;
 }
 
 .success-message {
-  font-size: 1.1rem;
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
   color: #64748b;
   max-width: 600px;
   line-height: 1.6;
-  margin: 0 0 40px 0;
+  margin: 0 0 clamp(24px, 4vw, 40px) 0;
 }
 
 .success-actions {
   display: flex;
   gap: 16px;
-  margin-bottom: 32px;
+  margin-bottom: clamp(20px, 4vw, 32px);
   flex-wrap: wrap;
   justify-content: center;
+  width: 100%;
+  max-width: 500px;
 }
 
 .action-btn {
   font-weight: 700;
-  padding: 16px 40px;
-  font-size: 1.1rem;
+  padding: clamp(12px, 2vw, 16px) clamp(24px, 4vw, 40px);
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
   transition: all 0.3s ease;
+  flex: 1;
+  min-width: 180px;
 }
 
 .primary-action {
@@ -755,47 +698,48 @@ export default defineComponent({
   gap: 12px;
   background: #f0f9ff;
   border-left: 4px solid #3b82f6;
-  padding: 16px 24px;
+  padding: clamp(12px, 3vw, 16px) clamp(16px, 4vw, 24px);
   border-radius: 8px;
   max-width: 600px;
   color: #1e40af;
-  font-size: 0.95rem;
+  font-size: clamp(0.85rem, 2vw, 0.95rem);
+  text-align: left;
 }
 
-/* Responsive */
+/* Media queries mejoradas para full responsive */
+@media (max-width: 1024px) {
+  .step-content {
+    min-height: auto;
+  }
+}
+
 @media (max-width: 768px) {
-  .page-background {
-    padding: 16px;
-  }
-
-  .page-header {
-    padding: 24px;
-  }
-
   .header-content {
     flex-direction: column;
     text-align: center;
   }
 
-  .page-title {
-    font-size: 1.5rem;
-  }
-
-  .step-content {
-    padding: 24px 16px;
+  .header-text {
+    min-width: 100%;
   }
 
   .step-header {
     flex-direction: column;
     text-align: center;
+    align-items: center;
   }
 
   .step-navigation {
-    flex-direction: column;
+    flex-direction: column-reverse;
   }
 
   .nav-btn {
     width: 100%;
+    max-width: none;
+  }
+
+  .nav-btn-back {
+    max-width: none;
   }
 
   .success-actions {
@@ -805,15 +749,19 @@ export default defineComponent({
 
   .action-btn {
     width: 100%;
+    min-width: auto;
   }
 
-  .styled-stepper :deep(.q-stepper__header) {
-    flex-wrap: wrap;
+  .optional-banner {
+    flex-direction: column;
+    text-align: center;
   }
+}
 
-  .styled-stepper :deep(.q-stepper__tab) {
-    flex: 1 1 100%;
-    margin: 4px 0;
+@media (max-width: 480px) {
+  .success-info {
+    flex-direction: column;
+    text-align: center;
   }
 }
 </style>

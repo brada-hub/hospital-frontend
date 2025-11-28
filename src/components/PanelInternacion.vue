@@ -344,6 +344,7 @@
             :tratamiento-para-editar="tratamientoSeleccionado"
             :internacion-id="internacionId"
             :catalogo-medicamentos="catalogoMedicamentos"
+            @medicamento-creado="onMedicamentoCreado"
           />
           <q-card-actions align="right" class="dialog-actions">
             <q-btn flat label="Cancelar" color="grey-7" v-close-popup />
@@ -773,6 +774,13 @@ export default defineComponent({
       }
     }
 
+    // ✅ Función para manejar la creación de un nuevo medicamento
+    function onMedicamentoCreado(nuevoMedicamento) {
+      console.log('✅ Nuevo medicamento creado:', nuevoMedicamento)
+      // Agregar el nuevo medicamento al catálogo local
+      catalogoMedicamentos.value.push(nuevoMedicamento)
+    }
+
     return {
       isLoading,
       error,
@@ -813,6 +821,7 @@ export default defineComponent({
       darDeAlta,
       descargarEpicrisis,
       descargarEvolucionClinica,
+      onMedicamentoCreado,
     }
   },
 })

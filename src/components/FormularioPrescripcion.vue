@@ -49,7 +49,7 @@
           <q-icon name="medication" /><span>Receta de Medicamentos</span>
         </div>
         <div class="row items-start q-col-gutter-md">
-          <div class="col-12 col-md-8">
+          <div class="col-12 col-md-6">
             <q-select
               outlined
               v-model="medicamentoSeleccionado"
@@ -75,7 +75,7 @@
               >
             </q-select>
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-md-3">
             <q-btn
               label="Añadir"
               icon="add"
@@ -83,6 +83,16 @@
               class="full-width q-py-md"
               :disable="!medicamentoSeleccionado"
               @click="agregarReceta"
+            />
+          </div>
+          <div class="col-12 col-md-3">
+            <q-btn
+              label="Nuevo Medicamento"
+              icon="add_circle"
+              color="primary"
+              outline
+              class="full-width q-py-md"
+              @click="abrirDialogoNuevoMedicamento"
             />
           </div>
         </div>
@@ -160,12 +170,81 @@
       </q-card-section>
     </q-card>
   </q-form>
-</template>
+
+    <!-- ✅ DIALOG para crear nuevo medicamento -->
+    <q-dialog v-model="dialogNuevoMedicamento" persistent>
+      <q-card style="min-width: 500px; border-radius: 16px">
+        <q-form @submit="guardarNuevoMedicamento">
+          <q-card-section class="row items-center q-pb-none" style="background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%); color: white; padding: 20px">
+            <div class="text-h6">Añadir Nuevo Medicamento</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup />
+          </q-card-section>
+
+          <q-card-section class="q-pt-md">
+            <q-input
+              outlined
+              v-model="nuevoMedicamentoForm.nombre"
+              label="Nombre del Medicamento *"
+              :rules="[(val) => !!val || 'El nombre es requerido']"
+              class="q-mb-md"
+            >
+              <template v-slot:prepend>
+                <q-icon name="medication" color="teal" />
+              </template>
+            </q-input>
+
+            <q-input
+              outlined
+              v-model="nuevoMedicamentoForm.descripcion"
+              label="Descripción *"
+              type="textarea"
+              rows="3"
+              :rules="[(val) => !!val || 'La descripción es requerida']"
+              class="q-mb-md"
+            >
+              <template v-slot:prepend>
+                <q-icon name="description" color="teal" />
+              </template>
+            </q-input>
+
+            <q-select
+              outlined
+              v-model="nuevoMedicamentoForm.categoria_id"
+              :options="categoriasMedicamentos"
+              option-value="id"
+              option-label="nombre"
+              emit-value
+              map-options
+              label="Categoría *"
+              :rules="[(val) => !!val || 'Debe seleccionar una categoría']"
+            >
+              <template v-slot:prepend>
+                <q-icon name="category" color="teal" />
+              </template>
+            </q-select>
+          </q-card-section>
+
+          <q-card-actions align="right" style="background-color: #f8fafc; padding: 16px">
+            <q-btn flat label="Cancelar" color="negative" v-close-popup />
+            <q-btn
+              label="Guardar y Agregar"
+              type="submit"
+              color="primary"
+              unelevated
+              :loading="guardandoMedicamento"
+            />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
+  </template>
 
 <script>
-import { defineComponent, ref, reactive, watch } from 'vue'
+import { defineComponent, ref, reactive, watch, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { format, addDays } from 'date-fns'
+import { api } from 'boot/axios'
 
 export default defineComponent({
   name: 'FormularioPrescripcion',
@@ -183,9 +262,29 @@ export default defineComponent({
       required: true,
     },
   },
-  setup(props, { expose }) {
+  setup(props, { expose, emit }) {
     const $q = useQuasar()
     const formRef = ref(null)
+
+    // ✅ Estado para crear nuevo medicamento
+    const dialogNuevoMedicamento = ref(false)
+    const guardandoMedicamento = ref(false)
+    const categoriasMedicamentos = ref([])
+    const nuevoMedicamentoForm = reactive({
+      nombre: '',
+      descripcion: '',
+      categoria_id: null,
+    })
+
+    // Cargar categorías al montar
+    onMounted(async () => {
+      try {
+        const response = await api.get('/medicamento-categorias')
+        categoriasMedicamentos.value = response.data
+      } catch (error) {
+        console.error('Error al cargar categorías:', error)
+      }
+    })
 
     const viasDeAdministracion = ref([
       'Oral',
@@ -297,6 +396,52 @@ export default defineComponent({
       tratamientoForm.recetas.splice(index, 1)
     }
 
+    // ✅ Función para abrir el diálogo de nuevo medicamento
+    function abrirDialogoNuevoMedicamento() {
+      Object.assign(nuevoMedicamentoForm, {
+        nombre: '',
+        descripcion: '',
+        categoria_id: null,
+      })
+      dialogNuevoMedicamento.value = true
+    }
+
+    // ✅ Función para guardar el nuevo medicamento
+    async function guardarNuevoMedicamento() {
+      guardandoMedicamento.value = true
+      try {
+        const response = await api.post('/medicamentos', nuevoMedicamentoForm)
+        const nuevoMedicamento = response.data
+
+        $q.notify({
+          color: 'positive',
+          message: `Medicamento "${nuevoMedicamento.nombre}" creado exitosamente`,
+          icon: 'check_circle',
+        })
+
+        // ✅ Agregar a la lista local de medicamentos (emitir evento al padre)
+        emit('medicamento-creado', nuevoMedicamento)
+
+        // ✅ Seleccionar automáticamente el medicamento recién creado
+        medicamentoSeleccionado.value = nuevoMedicamento.id
+
+        // ✅ Cerrar el diálogo
+        dialogNuevoMedicamento.value = false
+
+        // ✅ Agregar automáticamente a la receta
+        agregarReceta()
+      } catch (error) {
+        console.error('Error al crear medicamento:', error)
+        $q.notify({
+          color: 'negative',
+          message: error.response?.data?.message || 'Error al crear el medicamento',
+          icon: 'error',
+        })
+      } finally {
+        guardandoMedicamento.value = false
+      }
+    }
+
     function getMedicamentoNombre(id) {
       const med = props.catalogoMedicamentos.find((m) => m.id === id)
       return med ? med.nombre : 'Desconocido'
@@ -348,7 +493,14 @@ export default defineComponent({
       agregarReceta,
       quitarReceta,
       getMedicamentoNombre,
-      unidadesDosis, // Exponer la lista de unidades al template
+      unidadesDosis,
+      // ✅ Nuevo medicamento
+      dialogNuevoMedicamento,
+      guardandoMedicamento,
+      categoriasMedicamentos,
+      nuevoMedicamentoForm,
+      abrirDialogoNuevoMedicamento,
+      guardarNuevoMedicamento,
     }
   },
 })

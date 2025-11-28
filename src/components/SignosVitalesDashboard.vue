@@ -17,10 +17,11 @@
         </div>
         <div class="stat-card-body">
           <div class="stat-label">{{ card.nombre }}</div>
-          <div class="stat-value">{{ card.valor }}</div>
+          <!-- ✅ MOSTRAR VALOR DUAL SI EXISTE -->
+          <div class="stat-value">{{ card.valorFormateado }}</div>
           <div class="stat-unidad">{{ card.unidad }}</div>
-          <div class="stat-status" :class="getStatusClass(card.nombre, card.valor)">
-            {{ getStatusText(card.nombre, card.valor) }}
+          <div class="stat-status" :class="getStatusClass(card.nombre, card.valor, card.valorBajo)">
+            {{ getStatusText(card.nombre, card.valor, card.valorBajo) }}
           </div>
         </div>
       </div>
@@ -72,7 +73,7 @@ const props = defineProps({
 const rangosNormales = {
   'Frecuencia Cardíaca': { min: 60, max: 100 },
   'Frecuencia Respiratoria': { min: 12, max: 20 },
-  'Presión Arterial': { min: 90, max: 120 },
+  'Presión Arterial': { min: 90, max: 120 }, // Sistólica
   'Saturación de Oxígeno': { min: 95, max: 100 },
   Temperatura: { min: 36.5, max: 37.5 },
   'Glucosa Capilar': { min: 70, max: 140 },
@@ -99,21 +100,41 @@ function getIconForStat(nombre) {
   return iconMap[nombre] || 'analytics'
 }
 
-function getStatusClass(nombre, valor) {
+// ✅ FUNCIÓN MEJORADA: Considera valores duales
+function getStatusClass(nombre, valor, valorBajo = null) {
   const rango = rangosNormales[nombre]
   if (!rango) return 'status-normal'
 
   const numValor = parseFloat(valor)
+
+  // Para presión arterial, verificar ambos valores
+  if (nombre === 'Presión Arterial' && valorBajo) {
+    const numValorBajo = parseFloat(valorBajo)
+    // Sistólica alta o diastólica alta
+    if (numValor > rango.max || numValorBajo > 80) return 'status-alto'
+    // Sistólica baja o diastólica baja
+    if (numValor < rango.min || numValorBajo < 60) return 'status-bajo'
+    return 'status-normal'
+  }
+
   if (numValor < rango.min) return 'status-bajo'
   if (numValor > rango.max) return 'status-alto'
   return 'status-normal'
 }
 
-function getStatusText(nombre, valor) {
+function getStatusText(nombre, valor, valorBajo = null) {
   const rango = rangosNormales[nombre]
   if (!rango) return 'Normal'
 
   const numValor = parseFloat(valor)
+
+  if (nombre === 'Presión Arterial' && valorBajo) {
+    const numValorBajo = parseFloat(valorBajo)
+    if (numValor > rango.max || numValorBajo > 80) return 'Alto'
+    if (numValor < rango.min || numValorBajo < 60) return 'Bajo'
+    return 'Normal'
+  }
+
   if (numValor < rango.min) return 'Bajo'
   if (numValor > rango.max) return 'Alto'
   return 'Normal'
@@ -206,6 +227,14 @@ function getChartOptions(title, unit) {
           const usuario = dataPoint.user || 'No disponible'
           const rol = dataPoint.rol || ''
           const observacion = dataPoint.observacion
+          const valorBajo = dataPoint.valorBajo
+
+          let valorHtml = ''
+          if (valorBajo) {
+            valorHtml = `<div style="font-size: 18px; font-weight: 700; color: #10b981;">${value}/${valorBajo} <span style="font-size: 12px; color: #64748b;">${unit}</span></div>`
+          } else {
+            valorHtml = `<div style="font-size: 18px; font-weight: 700; color: #10b981;">${value} <span style="font-size: 12px; color: #64748b;">${unit}</span></div>`
+          }
 
           let observacionHtml = ''
           if (observacion) {
@@ -214,7 +243,7 @@ function getChartOptions(title, unit) {
 
           return `
             <div style="padding: 4px;">
-              <div style="font-size: 18px; font-weight: 700; color: #10b981;">${value} <span style="font-size: 12px; color: #64748b;">${unit}</span></div>
+              ${valorHtml}
               <div style="margin-top: 6px; font-size: 11px; color: #64748b;">
                 Registrado por: <strong style="color: #1e293b;">${usuario}</strong> (${rol})
               </div>
@@ -236,14 +265,34 @@ const latestControl = computed(() => {
   return props.controls[0]
 })
 
+// ✅ STAT CARDS MEJORADO: Soporta valores duales
 const statCards = computed(() => {
   if (!latestControl.value) return []
   const signosAExcluir = ['Altura', 'Peso']
+
   return latestControl.value.valores
     .filter((v) => !signosAExcluir.includes(v.signo.nombre))
-    .map((v) => ({ nombre: v.signo.nombre, valor: v.medida, unidad: v.signo.unidad }))
+    .map((v) => {
+      let valorFormateado = v.medida
+      let valorBajo = null
+
+      // Si tiene medida_baja, formatear como "120/80"
+      if (v.medida_baja) {
+        valorFormateado = `${v.medida}/${v.medida_baja}`
+        valorBajo = v.medida_baja
+      }
+
+      return {
+        nombre: v.signo.nombre,
+        valor: v.medida,
+        valorBajo: valorBajo,
+        valorFormateado: valorFormateado,
+        unidad: v.signo.unidad,
+      }
+    })
 })
 
+// ✅ CHART DATA MEJORADO: Soporta valores duales
 const chartData = computed(() => {
   if (!props.controls || props.controls.length === 0) return []
   const signosAExcluir = ['Altura', 'Peso']
@@ -272,6 +321,7 @@ const chartData = computed(() => {
         user: usuarioNombre,
         rol: usuarioRol,
         observacion: observacion,
+        valorBajo: valor.medida_baja ? parseFloat(valor.medida_baja) : null,
       }
 
       dataAgrupada[nombreSigno].data.push(commonPointData)
@@ -299,6 +349,7 @@ const chartData = computed(() => {
 </script>
 
 <style scoped>
+/* ... (mismo CSS que antes) ... */
 .signos-vitales-container {
   width: 100%;
   background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
@@ -542,85 +593,6 @@ const chartData = computed(() => {
 
   .chart-card-body {
     padding: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .signos-vitales-container {
-    padding: 12px;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-
-  .stat-card-header {
-    padding: 12px;
-  }
-
-  .stat-icon {
-    font-size: 20px !important;
-  }
-
-  .stat-card-body {
-    padding: 12px;
-  }
-
-  .stat-value {
-    font-size: 1.25rem;
-  }
-
-  .stat-label {
-    font-size: 0.65rem;
-  }
-
-  .stat-unidad {
-    font-size: 0.75rem;
-  }
-
-  .stat-status {
-    font-size: 0.625rem;
-    padding: 3px 10px;
-  }
-
-  .chart-card-header {
-    padding: 12px 16px;
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
-  }
-
-  .chart-title {
-    font-size: 0.8rem;
-  }
-
-  .chart-badge {
-    align-self: flex-start;
-    font-size: 0.7rem;
-    padding: 4px 10px;
-  }
-
-  .chart-card-body {
-    padding: 12px;
-  }
-}
-
-@media (max-width: 360px) {
-  .signos-vitales-container {
-    padding: 8px;
-  }
-
-  .stats-grid {
-    gap: 8px;
-  }
-
-  .stat-value {
-    font-size: 1.1rem;
-  }
-
-  .charts-grid {
-    gap: 12px;
   }
 }
 </style>

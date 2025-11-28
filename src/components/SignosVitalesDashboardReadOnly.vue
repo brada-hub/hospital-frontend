@@ -26,10 +26,11 @@
           </div>
           <div class="stat-card-body">
             <div class="stat-label">{{ card.nombre }}</div>
-            <div class="stat-value">{{ card.valor }}</div>
+            <!-- ✅ MOSTRAR VALOR DUAL SI EXISTE -->
+            <div class="stat-value">{{ card.valorFormateado }}</div>
             <div class="stat-unidad">{{ card.unidad }}</div>
-            <div class="stat-status" :class="getStatusClass(card.nombre, card.valor)">
-              {{ getStatusText(card.nombre, card.valor) }}
+            <div class="stat-status" :class="getStatusClass(card.nombre, card.valor, card.valorBajo)">
+              {{ getStatusText(card.nombre, card.valor, card.valorBajo) }}
             </div>
           </div>
         </div>
@@ -109,21 +110,37 @@ function getIconForStat(nombre) {
   return iconMap[nombre] || 'analytics'
 }
 
-function getStatusClass(nombre, valor) {
+function getStatusClass(nombre, valor, valorBajo = null) {
   const rango = rangosNormales[nombre]
   if (!rango) return 'status-normal'
 
   const numValor = parseFloat(valor)
+
+  if (nombre === 'Presión Arterial' && valorBajo) {
+    const numValorBajo = parseFloat(valorBajo)
+    if (numValor > rango.max || numValorBajo > 80) return 'status-alto'
+    if (numValor < rango.min || numValorBajo < 60) return 'status-bajo'
+    return 'status-normal'
+  }
+
   if (numValor < rango.min) return 'status-bajo'
   if (numValor > rango.max) return 'status-alto'
   return 'status-normal'
 }
 
-function getStatusText(nombre, valor) {
+function getStatusText(nombre, valor, valorBajo = null) {
   const rango = rangosNormales[nombre]
   if (!rango) return 'Normal'
 
   const numValor = parseFloat(valor)
+
+  if (nombre === 'Presión Arterial' && valorBajo) {
+    const numValorBajo = parseFloat(valorBajo)
+    if (numValor > rango.max || numValorBajo > 80) return 'Alto'
+    if (numValor < rango.min || numValorBajo < 60) return 'Bajo'
+    return 'Normal'
+  }
+
   if (numValor < rango.min) return 'Bajo'
   if (numValor > rango.max) return 'Alto'
   return 'Normal'
@@ -216,6 +233,14 @@ function getChartOptions(title, unit) {
           const usuario = dataPoint.user || 'No disponible'
           const rol = dataPoint.rol || ''
           const observacion = dataPoint.observacion
+          const valorBajo = dataPoint.valorBajo
+
+          let valorHtml = ''
+          if (valorBajo) {
+            valorHtml = `<div style="font-size: 18px; font-weight: 700; color: #10b981;">${value}/${valorBajo} <span style="font-size: 12px; color: #64748b;">${unit}</span></div>`
+          } else {
+            valorHtml = `<div style="font-size: 18px; font-weight: 700; color: #10b981;">${value} <span style="font-size: 12px; color: #64748b;">${unit}</span></div>`
+          }
 
           let observacionHtml = ''
           if (observacion) {
@@ -224,7 +249,7 @@ function getChartOptions(title, unit) {
 
           return `
             <div style="padding: 4px;">
-              <div style="font-size: 18px; font-weight: 700; color: #10b981;">${value} <span style="font-size: 12px; color: #64748b;">${unit}</span></div>
+              ${valorHtml}
               <div style="margin-top: 6px; font-size: 11px; color: #64748b;">
                 Registrado por: <strong style="color: #1e293b;">${usuario}</strong> (${rol})
               </div>
@@ -249,9 +274,26 @@ const latestControl = computed(() => {
 const statCards = computed(() => {
   if (!latestControl.value) return []
   const signosAExcluir = ['Altura', 'Peso']
+
   return latestControl.value.valores
     .filter((v) => !signosAExcluir.includes(v.signo.nombre))
-    .map((v) => ({ nombre: v.signo.nombre, valor: v.medida, unidad: v.signo.unidad }))
+    .map((v) => {
+      let valorFormateado = v.medida
+      let valorBajo = null
+
+      if (v.medida_baja) {
+        valorFormateado = `${v.medida}/${v.medida_baja}`
+        valorBajo = v.medida_baja
+      }
+
+      return {
+        nombre: v.signo.nombre,
+        valor: v.medida,
+        valorBajo: valorBajo,
+        valorFormateado: valorFormateado,
+        unidad: v.signo.unidad,
+      }
+    })
 })
 
 const chartData = computed(() => {
@@ -282,6 +324,7 @@ const chartData = computed(() => {
         user: usuarioNombre,
         rol: usuarioRol,
         observacion: observacion,
+        valorBajo: valor.medida_baja ? parseFloat(valor.medida_baja) : null,
       }
 
       dataAgrupada[nombreSigno].data.push(commonPointData)
@@ -309,6 +352,7 @@ const chartData = computed(() => {
 </script>
 
 <style scoped>
+/* (Mismo CSS que el componente anterior) */
 .signos-vitales-readonly-container {
   width: 100%;
   background: #f8fafc;
