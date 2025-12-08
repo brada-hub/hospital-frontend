@@ -4,7 +4,7 @@ import { useUserStore } from 'stores/user'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://192.168.0.29:8000/api',
-  withCredentials: true, // ✅ Necesario para Sanctum CSRF cookies
+  // withCredentials: true, // REMOVED: CORS cross-domain fix
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

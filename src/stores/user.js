@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { api } from 'boot/axios'
-import axios from 'axios' // ✅ Importar axios para CSRF
+// import axios from 'axios' // ✅ Importar axios para CSRF (ELIMINADO: Usamos Token)
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
@@ -74,14 +74,8 @@ export const useUserStore = defineStore('user', () => {
     loading.value = true
     try {
       // 🔐 PASO 1: Obtener CSRF cookie de Sanctum (sin /api)
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://192.168.0.29:8000/api'
-      // Extraer protocolo, host y puerto correctos
-      const urlParts = apiUrl.match(/(https?:\/\/[^/]+)/)
-      const baseUrl = urlParts ? urlParts[1] : 'http://192.168.0.29:8000'
-
-      await axios.get(`${baseUrl}/sanctum/csrf-cookie`, {
-        withCredentials: true
-      })
+      // 🔐 PASO 1: (ELIMINADO) No usamos Cookies en Cross-Domain. Usamos Token.
+      // await axios.get(...)
 
       // 🔐 PASO 2: Hacer login con las credenciales
       const { data } = await api.post('/login', { email, password })
