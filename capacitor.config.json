@@ -1,0 +1,10 @@
+{
+  "appId": "com.hospital.brayaapp",
+  "appName": "Mi Hospital",
+  "webDir": "dist/spa",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true,
+    "allowNavigation": ["*"]
+  }
+}
