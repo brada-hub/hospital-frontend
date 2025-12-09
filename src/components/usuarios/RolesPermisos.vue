@@ -3,12 +3,14 @@
     <div class="header-section">
       <h2 class="titulo-principal">Roles y Permisos</h2>
       <q-btn
-        class="btn-agregar"
+        class="btn-agregar shadow-1"
         label="Crear Rol"
         icon="add"
         @click="openAddRolDialog"
         no-caps
         rounded
+        color="white"
+        text-color="teal-9"
       />
     </div>
     <div class="roles-grid">
@@ -48,8 +50,7 @@
         </div>
         <div class="card-actions">
           <q-btn
-            flat
-            dense
+            unelevated
             class="btn-editar"
             icon="edit"
             label="Editar"
@@ -57,8 +58,7 @@
             no-caps
           />
           <q-btn
-            flat
-            dense
+            unelevated
             class="btn-eliminar"
             icon="delete"
             label="Eliminar"
@@ -69,7 +69,7 @@
       </div>
     </div>
     <q-dialog v-model="rolDialog" persistent @hide="resetForm">
-      <q-card class="dialog-card scrollable-dialog" style="max-width: 700px">
+      <q-card class="dialog-card scrollable-dialog">
         <q-form @submit.prevent="saveRolAndPermissions">
           <q-card-section class="dialog-header">
             <div class="dialog-title">{{ rolForm.id ? 'Editar Rol' : 'Añadir Rol' }}</div>
@@ -110,7 +110,7 @@
               :error-message="validationErrors.descripcion"
             />
             <div class="text-subtitle1 q-mt-lg">Permisos del Rol</div>
-            <q-list bordered separator class="q-mt-sm permission-list">
+            <q-list bordered separator class="q-mt-sm permission-list rounded-borders">
               <q-item v-for="permiso in allPermissions" :key="permiso.id" tag="label" v-ripple>
                 <q-item-section side top>
                   <q-checkbox v-model="rolPermissions" :val="permiso.id" color="teal" />
@@ -124,7 +124,7 @@
           </q-card-section>
 
           <q-card-actions align="right" class="dialog-actions">
-            <q-btn flat label="Cancelar" v-close-popup class="btn-cancelar" />
+            <q-btn flat label="Cancelar" v-close-popup class="btn-cancelar rounded-borders" />
             <q-btn label="Guardar" type="submit" class="btn-guardar" :loading="isSaving" />
           </q-card-actions>
         </q-form>
@@ -281,13 +281,26 @@ const deleteRol = async (rol) => {
   }
 }
 
+/* ✅ Nuevo estilo para las tarjetas */
+.rol-card {
+  background: white;
+  border-radius: 16px; /* Bordes redondeados */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow: hidden; /* Para que el header respete el border-radius */
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex; /* Para flex column layout interno si es necesario */
+  flex-direction: column;
+}
+
+.rol-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
 .card-header {
   background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   color: white;
-  padding: 16px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 20px 24px;
 }
 .rol-info {
   display: flex;
@@ -295,50 +308,55 @@ const deleteRol = async (rol) => {
   gap: 16px;
 }
 .rol-icon {
-  opacity: 0.8;
+  opacity: 0.9;
 }
 .rol-details {
   display: flex;
   flex-direction: column;
 }
 .rol-label {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 700;
   opacity: 0.8;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .rol-nombre {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 .card-body {
-  padding: 16px;
-  background: #f8fafc;
+  padding: 24px;
+  background: #ffffff;
+  flex: 1; /* Ocupa el espacio restante */
 }
 .info-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 12px;
   color: #475569;
+  margin-bottom: 8px;
 }
 .info-item-permissions {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 12px;
   color: #475569;
 }
 .info-label {
-  font-weight: 600;
+  font-weight: 700;
   color: #334155;
   flex-shrink: 0;
 }
 .info-value {
   flex: 1;
   word-break: break-word;
+  line-height: 1.5;
 }
 .info-icon {
-  margin-top: 3px;
+  margin-top: 2px;
   color: #94a3b8;
 }
 .permisos-value {
@@ -347,76 +365,88 @@ const deleteRol = async (rol) => {
 .permisos-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 8px;
   align-items: flex-start;
 }
 .permiso-chip {
-  background-color: #e0f2f1;
-  color: #00796b;
-  font-weight: 500;
-  height: 24px;
-  padding: 0 8px;
-  border-radius: 6px;
+  background-color: #f0fdfa; /* Teal 50 */
+  color: #0f766e; /* Teal 700 */
+  font-weight: 600;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 9999px; /* Pill shape fully rounded */
+  border: 1px solid #ccfbf1;
 }
 .card-actions {
-  margin-top: auto;
-  padding: 8px;
+  padding: 16px 24px;
   display: flex;
-  gap: 8px;
-  background: #f1f5f9;
-  border-top: 1px solid #e2e8f0;
+  gap: 12px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
 }
 .btn-editar,
 .btn-eliminar {
   flex: 1;
-  font-weight: 600;
-  border-radius: 8px;
-  color: white;
+  font-weight: 700;
+  border-radius: 12px; /* Botones más redondeados */
+  font-size: 0.9rem;
+  padding: 8px 0;
 }
 .btn-editar {
-  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  background: #0d9488; /* Teal 600 */
+  color: white;
+}
+.btn-editar:hover {
+  background: #0f766e;
 }
 .btn-eliminar {
-  background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+  background: #dc2626; /* Red 600 */
+  color: white;
+}
+.btn-eliminar:hover {
+  background: #b91c1c;
 }
 
 /* Estilos para Modales (estandarizados) */
 .dialog-card {
   width: 90vw;
-  max-width: 500px; /* Reducido para que se vea mejor */
-  border-radius: 16px;
-  /* overflow: hidden; -> Se quita para que el flexbox funcione mejor */
+  max-width: 600px;
+  border-radius: 20px; /* Modal muy redondeado */
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 .dialog-header {
   background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
   color: white;
-  padding: 16px 24px;
+  padding: 20px 32px;
 }
 .dialog-title {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.35rem;
+  font-weight: 700;
 }
 .dialog-content {
-  padding: 24px;
+  padding: 32px;
 }
 .input-field {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 .dialog-actions {
-  padding: 16px 24px;
+  padding: 20px 32px;
   background-color: #f8fafc;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #f1f5f9;
+  gap: 12px;
 }
 .btn-cancelar {
   color: #64748b;
   font-weight: 600;
+  border-radius: 8px;
 }
 .btn-guardar {
   background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
   color: white;
   border-radius: 12px;
-  padding: 8px 24px;
-  font-weight: 600;
+  padding: 10px 32px;
+  font-weight: 700;
+  box-shadow: 0 4px 6px -1px rgba(20, 184, 166, 0.2);
 }
 
 /* ✅ === NUEVOS ESTILOS PARA EL SCROLL === */
