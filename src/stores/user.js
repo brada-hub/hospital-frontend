@@ -204,9 +204,18 @@ export const useUserStore = defineStore('user', () => {
     resetInactivityTimer()
   }
 
+  // Guardamos la función para cerrar la notificación
+  let dismissNotification = null
+
   const resetInactivityTimer = () => {
     clearTimeout(inactivityTimer.value)
     clearInterval(countdownTimer.value)
+
+    // Si hay una notificación abierta, la cerramos
+    if (dismissNotification) {
+      dismissNotification()
+      dismissNotification = null
+    }
 
     inactivityTimer.value = setTimeout(
       () => {
@@ -218,23 +227,46 @@ export const useUserStore = defineStore('user', () => {
 
   const startCountdown = () => {
     let secondsLeft = countdownSeconds
+    const notifGroup = 'logout_countdown' // Grupo único para actualizar la misma notificación
 
-    const notif = $q.notify({
-      message: `Se cerrará sesión en ${secondsLeft} segundos por inactividad`,
-      color: 'red',
-      timeout: 0,
-      actions: [{ label: 'Mantener sesión', color: 'white', handler: resetInactivityTimer }],
-    })
+    // Función auxiliar para mostrar/actualizar
+    const showNotif = (seconds) => {
+      return $q.notify({
+        group: notifGroup, // CLAVE: Permite actualizar el mensaje sin crear nuevas
+        message: `Se cerrará sesión en ${seconds} segundos por inactividad`,
+        color: 'red',
+        timeout: 0, // No se cierra sola
+        position: 'top',
+        actions: [
+          {
+            label: 'Mantener sesión',
+            color: 'white',
+            handler: () => {
+              resetInactivityTimer()
+            },
+          },
+        ],
+      })
+    }
+
+    // Mostrar primera vez y guardar dismiss
+    dismissNotification = showNotif(secondsLeft)
 
     countdownTimer.value = setInterval(() => {
       secondsLeft--
-      notif.update({ message: `Se cerrará sesión en ${secondsLeft} segundos por inactividad` })
 
       if (secondsLeft <= 0) {
         clearInterval(countdownTimer.value)
-        notif.dismiss()
+        if (dismissNotification) {
+          dismissNotification()
+          dismissNotification = null
+        }
         logout()
+        return
       }
+
+      // Actualizar mensaje (al usar el mismo group, se actualiza in-place)
+      dismissNotification = showNotif(secondsLeft)
     }, 1000)
   }
 

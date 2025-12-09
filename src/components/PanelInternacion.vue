@@ -114,6 +114,57 @@
         </q-card-section>
       </q-card>
 
+      <!-- Evolución y Signos Vitales -->
+      <div class="section-header">
+        <q-icon name="analytics" size="28px" color="teal" />
+        <span>Monitor de Signos Vitales y Evolución</span>
+      </div>
+
+      <div class="evolution-actions" v-if="!dashboardData.fecha_alta">
+        <q-btn
+          unelevated
+          rounded
+          color="secondary"
+          icon="note_add"
+          label="Añadir Nota de Evolución"
+          @click="abrirDialogoEvolucion"
+        />
+      </div>
+
+      <div v-if="!dashboardData.controls || !dashboardData.controls.length" class="empty-state">
+        <q-icon name="analytics" size="80px" color="grey-5" />
+        <p>No hay notas de evolución o controles de signos vitales registrados.</p>
+      </div>
+
+      <SignosVitalesDashboard
+        v-if="controlesConValores.length > 0"
+        :controls="controlesConValores"
+        :internacion="dashboardData"
+      />
+
+      <div class="evolution-notes" v-if="notasDeEvolucion.length > 0">
+        <div class="notes-title">Notas de Evolución Médica</div>
+        <q-card
+          v-for="control in notasDeEvolucion"
+          :key="control.id"
+          flat
+          bordered
+          class="note-card"
+        >
+          <q-card-section class="note-header">
+            <div class="note-date">{{ formatDateTime(control.fecha_control) }}</div>
+            <div class="note-author" v-if="control.user">
+              Por: {{ control.user.nombre }} {{ control.user.apellidos }}
+            </div>
+          </q-card-section>
+          <q-card-section class="note-content">
+            {{ control.observaciones }}
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <q-separator class="section-separator" />
+
       <!-- Tratamientos -->
       <div class="section-header">
         <q-icon name="medication" size="28px" color="teal" />
@@ -286,55 +337,6 @@
         </q-card-section>
       </q-card>
 
-      <q-separator class="section-separator" />
-
-      <!-- Evolución y Signos Vitales -->
-      <div class="section-header">
-        <q-icon name="analytics" size="28px" color="teal" />
-        <span>Monitor de Signos Vitales y Evolución</span>
-      </div>
-
-      <div class="evolution-actions" v-if="!dashboardData.fecha_alta">
-        <q-btn
-          unelevated
-          rounded
-          color="secondary"
-          icon="note_add"
-          label="Añadir Nota de Evolución"
-          @click="abrirDialogoEvolucion"
-        />
-      </div>
-
-      <div v-if="!dashboardData.controls || !dashboardData.controls.length" class="empty-state">
-        <q-icon name="analytics" size="80px" color="grey-5" />
-        <p>No hay notas de evolución o controles de signos vitales registrados.</p>
-      </div>
-
-      <SignosVitalesDashboard
-        v-if="controlesConValores.length > 0"
-        :controls="controlesConValores"
-      />
-
-      <div class="evolution-notes" v-if="notasDeEvolucion.length > 0">
-        <div class="notes-title">Notas de Evolución Médica</div>
-        <q-card
-          v-for="control in notasDeEvolucion"
-          :key="control.id"
-          flat
-          bordered
-          class="note-card"
-        >
-          <q-card-section class="note-header">
-            <div class="note-date">{{ formatDateTime(control.fecha_control) }}</div>
-            <div class="note-author" v-if="control.user">
-              Por: {{ control.user.nombre }} {{ control.user.apellidos }}
-            </div>
-          </q-card-section>
-          <q-card-section class="note-content">
-            {{ control.observaciones }}
-          </q-card-section>
-        </q-card>
-      </div>
 
       <!-- Diálogos -->
       <q-dialog v-model="mostrarDialogoTratamiento" persistent>
@@ -451,15 +453,17 @@ export default defineComponent({
     const panelAlimentacionRef = ref(null)
 
     const controlesConValores = computed(() => {
-      if (!dashboardData.value || !Array.isArray(dashboardData.value.controls)) return []
-      return dashboardData.value.controls.filter(
+      // FIX: El backend envía 'controles' (español), no 'controls'
+      if (!dashboardData.value || !Array.isArray(dashboardData.value.controles)) return []
+      return dashboardData.value.controles.filter(
         (c) => c && Array.isArray(c.valores) && c.valores.length > 0,
       )
     })
 
     const notasDeEvolucion = computed(() => {
-      if (!dashboardData.value || !Array.isArray(dashboardData.value.controls)) return []
-      return dashboardData.value.controls.filter(
+      // FIX: El backend envía 'controles' (español), no 'controls'
+      if (!dashboardData.value || !Array.isArray(dashboardData.value.controles)) return []
+      return dashboardData.value.controles.filter(
         (c) => c && c.observaciones && (!Array.isArray(c.valores) || c.valores.length === 0),
       )
     })
@@ -590,7 +594,7 @@ export default defineComponent({
       }).onOk(async () => {
         try {
           Loading.show({ message: 'Suspendiendo tratamiento...' })
-          await api.patch(`/tratamientos/${id}/suspender`)
+          await api.post(`/tratamientos/${id}/suspender`)
           Notify.create({ type: 'positive', message: 'Tratamiento suspendido correctamente.' })
           await fetchData()
         } catch (err) {
@@ -613,7 +617,7 @@ export default defineComponent({
       }).onOk(async () => {
         try {
           Loading.show({ message: 'Suspendiendo medicamento...' })
-          await api.patch(`/recetas/${id}/suspender`)
+          await api.post(`/recetas/${id}/suspender`)
           Notify.create({ type: 'positive', message: 'Medicamento suspendido correctamente.' })
           await fetchData()
         } catch (err) {

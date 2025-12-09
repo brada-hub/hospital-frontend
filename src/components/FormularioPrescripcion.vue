@@ -173,7 +173,7 @@
 
     <!-- ✅ DIALOG para crear nuevo medicamento -->
     <q-dialog v-model="dialogNuevoMedicamento" persistent>
-      <q-card style="min-width: 500px; border-radius: 16px">
+      <q-card style="width: 500px; max-width: 90vw; border-radius: 16px">
         <q-form @submit="guardarNuevoMedicamento">
           <q-card-section class="row items-center q-pb-none" style="background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%); color: white; padding: 20px">
             <div class="text-h6">Añadir Nuevo Medicamento</div>
