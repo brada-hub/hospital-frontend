@@ -75,6 +75,7 @@
                     v-model="email"
                     type="email"
                     placeholder="tu@correo.com"
+                    autocomplete="email"
                     class="elegant-input"
                     hide-bottom-space
                   >
@@ -90,6 +91,7 @@
                     v-model="password"
                     :type="showPassword ? 'text' : 'password'"
                     placeholder="••••••••"
+                    autocomplete="current-password"
                     class="elegant-input"
                     hide-bottom-space
                   >

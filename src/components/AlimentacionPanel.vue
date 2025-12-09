@@ -338,8 +338,8 @@ const handleSuspender = async (motivo) => {
 
   $q.loading.show({ message: 'Suspendiendo plan...' })
   try {
-    // Cambiado de POST a PATCH
-    await api.patch(`/alimentaciones/${alimentacion.value.id}/suspender`, {
+    // FIX: Cambiado de PATCH a POST para coincidir con el backend
+    await api.post(`/alimentaciones/${alimentacion.value.id}/suspender`, {
       motivo_suspension: motivo,
     })
 

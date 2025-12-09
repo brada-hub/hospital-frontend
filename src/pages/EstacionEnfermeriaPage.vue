@@ -72,6 +72,18 @@
               </div>
             </div>
 
+            <div class="info-row q-mt-sm">
+              <div class="info-item full-width">
+                <q-icon name="medical_services" size="20px" class="info-icon" />
+                <div class="info-content">
+                  <span class="info-label">Diagnóstico</span>
+                  <span class="info-value text-weight-bold">{{
+                    internacion.diagnostico || 'Sin diagnóstico registrado'
+                  }}</span>
+                </div>
+              </div>
+            </div>
+
             <!-- Datos Antropométricos -->
             <div v-if="internacion.datos_antropometricos" class="datos-rapidos">
               <div class="dato-quick">
