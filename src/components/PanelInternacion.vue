@@ -114,228 +114,253 @@
         </q-card-section>
       </q-card>
 
-      <!-- Evolución y Signos Vitales -->
-      <div class="section-header">
-        <q-icon name="analytics" size="28px" color="teal" />
-        <span>Monitor de Signos Vitales y Evolución</span>
-      </div>
-
-      <div class="evolution-actions" v-if="!dashboardData.fecha_alta">
-        <q-btn
-          unelevated
-          rounded
-          color="secondary"
-          icon="note_add"
-          label="Añadir Nota de Evolución"
-          @click="abrirDialogoEvolucion"
-        />
-      </div>
-
-      <div v-if="!dashboardData.controls || !dashboardData.controls.length" class="empty-state">
-        <q-icon name="analytics" size="80px" color="grey-5" />
-        <p>No hay notas de evolución o controles de signos vitales registrados.</p>
-      </div>
-
-      <SignosVitalesDashboard
-        v-if="controlesConValores.length > 0"
-        :controls="controlesConValores"
-        :internacion="dashboardData"
-      />
-
-      <div class="evolution-notes" v-if="notasDeEvolucion.length > 0">
-        <div class="notes-title">Notas de Evolución Médica</div>
-        <q-card
-          v-for="control in notasDeEvolucion"
-          :key="control.id"
-          flat
-          bordered
-          class="note-card"
+      <!-- TABS NAVIGATION -->
+      <div class="tabs-container">
+        <q-tabs
+          v-model="activeTab"
+          dense
+          class="text-grey"
+          active-color="primary"
+          indicator-color="primary"
+          align="justify"
+          narrow-indicator
         >
-          <q-card-section class="note-header">
-            <div class="note-date">{{ formatDateTime(control.fecha_control) }}</div>
-            <div class="note-author" v-if="control.user">
-              Por: {{ control.user.nombre }} {{ control.user.apellidos }}
-            </div>
-          </q-card-section>
-          <q-card-section class="note-content">
-            {{ control.observaciones }}
-          </q-card-section>
-        </q-card>
-      </div>
+          <q-tab name="signos-vitales" icon="monitor_heart" label="Signos Vitales" />
+          <q-tab name="tratamientos" icon="medication" label="Tratamientos" />
+          <q-tab name="alimentacion" icon="restaurant" label="Alimentación" />
+          <q-tab name="plan-cuidados" icon="assignment" label="Plan de Cuidados" />
+        </q-tabs>
 
-      <q-separator class="section-separator" />
+        <q-separator />
 
-      <!-- Tratamientos -->
-      <div class="section-header">
-        <q-icon name="medication" size="28px" color="teal" />
-        <span>Tratamientos</span>
-      </div>
+        <q-tab-panels v-model="activeTab" animated>
+          <!-- PANEL: SIGNOS VITALES -->
+          <q-tab-panel name="signos-vitales" class="q-pa-none">
+             <div class="panel-inner-content">
+                <SignosVitalesDashboard
+                  v-if="controlesConValores.length > 0"
+                  :controls="controlesConValores"
+                  :internacion="dashboardData"
+                />
 
-      <div
-        v-if="!dashboardData.tratamientos || !dashboardData.tratamientos.length"
-        class="empty-state"
-      >
-        <q-icon name="medication" size="80px" color="grey-5" />
-        <p>No hay tratamientos prescritos.</p>
-      </div>
+                <div v-else class="empty-state">
+                  <q-icon name="monitor_heart" size="60px" color="grey-4" />
+                   <p class="text-grey-6 q-mt-sm">No hay registros de signos vitales.</p>
+                </div>
+             </div>
+          </q-tab-panel>
 
-      <q-card
-        v-for="tratamiento in dashboardData.tratamientos"
-        :key="tratamiento.id"
-        flat
-        bordered
-        class="treatment-card"
-      >
-        <q-card-section class="treatment-header">
-          <div class="treatment-title">{{ tratamiento.tipo }}</div>
-          <div class="treatment-actions">
-            <q-badge
-              :color="getColorPorEstado(tratamiento.estado)"
-              :label="traducirEstado(tratamiento.estado)"
-              class="status-badge-small"
-            />
-            <q-btn flat round dense icon="more_vert" v-if="!dashboardData.fecha_alta">
-              <q-menu>
-                <q-list dense>
-                  <q-item
-                    clickable
-                    v-ripple
-                    @click="abrirDialogoEditar(tratamiento)"
-                    :disable="tratamiento.estado !== 0"
-                  >
-                    <q-item-section avatar><q-icon name="edit" color="teal" /></q-item-section>
-                    <q-item-section>Modificar</q-item-section>
-                  </q-item>
-                  <q-item
-                    clickable
-                    v-ripple
-                    @click="suspenderTratamiento(tratamiento.id)"
-                    :disable="tratamiento.estado !== 0"
-                  >
-                    <q-item-section avatar>
-                      <q-icon name="pause_circle_outline" color="orange" />
-                    </q-item-section>
-                    <q-item-section>Suspender Tratamiento</q-item-section>
-                  </q-item>
-                </q-list>
-              </q-menu>
-            </q-btn>
-          </div>
-        </q-card-section>
+          <!-- PANEL: TRATAMIENTOS -->
+          <q-tab-panel name="tratamientos" class="q-pa-none">
+             <div class="panel-inner-content">
+                <div
+                  v-if="!dashboardData.tratamientos || !dashboardData.tratamientos.length"
+                  class="empty-state"
+                >
+                  <q-icon name="medication" size="80px" color="grey-5" />
+                  <p>No hay tratamientos prescritos.</p>
+                </div>
 
-        <q-card-section>
-          <p><strong>Descripción:</strong> {{ tratamiento.descripcion }}</p>
-          <p v-if="tratamiento.medico">
-            <strong>Prescrito por:</strong> Dr. {{ tratamiento.medico.nombre }}
-            {{ tratamiento.medico.apellidos }}
-          </p>
+                <q-card
+                  v-for="tratamiento in dashboardData.tratamientos"
+                  :key="tratamiento.id"
+                  flat
+                  bordered
+                  class="treatment-card"
+                >
+                  <q-card-section class="treatment-header">
+                    <div class="treatment-title">{{ tratamiento.tipo }}</div>
+                    <div class="treatment-actions">
+                      <q-badge
+                        :color="getColorPorEstado(tratamiento.estado)"
+                        :label="traducirEstado(tratamiento.estado)"
+                        class="status-badge-small"
+                      />
+                      <q-btn flat round dense icon="more_vert" v-if="!dashboardData.fecha_alta">
+                        <q-menu>
+                          <q-list dense>
+                            <q-item
+                              clickable
+                              v-ripple
+                              @click="abrirDialogoEditar(tratamiento)"
+                              :disable="tratamiento.estado !== 0"
+                            >
+                              <q-item-section avatar><q-icon name="edit" color="teal" /></q-item-section>
+                              <q-item-section>Modificar</q-item-section>
+                            </q-item>
+                            <q-item
+                              clickable
+                              v-ripple
+                              @click="suspenderTratamiento(tratamiento.id)"
+                              :disable="tratamiento.estado !== 0"
+                            >
+                              <q-item-section avatar>
+                                <q-icon name="pause_circle_outline" color="orange" />
+                              </q-item-section>
+                              <q-item-section>Suspender Tratamiento</q-item-section>
+                            </q-item>
+                          </q-list>
+                        </q-menu>
+                      </q-btn>
+                    </div>
+                  </q-card-section>
 
-          <q-list
-            bordered
-            separator
-            v-if="tratamiento.recetas && tratamiento.recetas.length > 0"
-            class="medications-list"
-          >
-            <q-item-label header>Medicamentos</q-item-label>
-            <q-item v-for="receta in tratamiento.recetas" :key="receta.id">
-              <q-item-section>
-                <q-item-label class="medication-name">
-                  {{ receta.medicamento.nombre }}
-                  <q-badge
-                    v-if="receta.estado === 1"
-                    color="orange"
-                    label="Suspendido"
-                    class="q-ml-sm"
-                  />
-                </q-item-label>
-                <q-item-label caption :class="{ 'text-strike text-grey-6': receta.estado === 1 }">
-                  {{ receta.dosis }} - {{ receta.via_administracion }} - Cada
-                  {{ receta.frecuencia_horas }} horas por {{ receta.duracion_dias }} días.
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-btn flat round dense icon="more_vert" v-if="!dashboardData.fecha_alta">
-                  <q-menu>
-                    <q-list dense>
-                      <q-item
-                        clickable
-                        v-ripple
-                        @click="suspenderReceta(receta.id)"
-                        :disable="receta.estado !== 0"
-                      >
-                        <q-item-section avatar>
-                          <q-icon name="pause_circle" color="orange" />
+                  <q-card-section>
+                    <p><strong>Descripción:</strong> {{ tratamiento.descripcion }}</p>
+                    <p v-if="tratamiento.medico">
+                      <strong>Prescrito por:</strong> Dr. {{ tratamiento.medico.nombre }}
+                      {{ tratamiento.medico.apellidos }}
+                    </p>
+
+                    <q-list
+                      bordered
+                      separator
+                      v-if="tratamiento.recetas && tratamiento.recetas.length > 0"
+                      class="medications-list"
+                    >
+                      <q-item-label header>Medicamentos</q-item-label>
+                      <q-item v-for="receta in tratamiento.recetas" :key="receta.id">
+                        <q-item-section>
+                          <q-item-label class="medication-name">
+                            {{ receta.medicamento.nombre }}
+                            <q-badge
+                              v-if="receta.estado === 1"
+                              color="orange"
+                              label="Suspendido"
+                              class="q-ml-sm"
+                            />
+                          </q-item-label>
+                          <q-item-label caption :class="{ 'text-strike text-grey-6': receta.estado === 1 }">
+                            {{ receta.dosis }} - {{ receta.via_administracion }} - Cada
+                            {{ receta.frecuencia_horas }} horas por {{ receta.duracion_dias }} días.
+                          </q-item-label>
                         </q-item-section>
-                        <q-item-section>Suspender Medicamento</q-item-section>
+                        <q-item-section side>
+                          <q-btn flat round dense icon="more_vert" v-if="!dashboardData.fecha_alta">
+                            <q-menu>
+                              <q-list dense>
+                                <q-item
+                                  clickable
+                                  v-ripple
+                                  @click="suspenderReceta(receta.id)"
+                                  :disable="receta.estado !== 0"
+                                >
+                                  <q-item-section avatar>
+                                    <q-icon name="pause_circle" color="orange" />
+                                  </q-item-section>
+                                  <q-item-section>Suspender Medicamento</q-item-section>
+                                </q-item>
+                              </q-list>
+                            </q-menu>
+                          </q-btn>
+                        </q-item-section>
                       </q-item>
                     </q-list>
-                  </q-menu>
-                </q-btn>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card-section>
-      </q-card>
+                  </q-card-section>
+                </q-card>
+             </div>
+          </q-tab-panel>
 
-      <!-- Alimentación -->
-      <div class="section-header">
-        <q-icon name="restaurant" size="28px" color="teal" />
-        <span>Planes de Alimentación</span>
+          <!-- PANEL: ALIMENTACIÓN -->
+          <q-tab-panel name="alimentacion" class="q-pa-none">
+             <div class="panel-inner-content">
+                <div
+                  v-if="!dashboardData.alimentaciones || !dashboardData.alimentaciones.length"
+                  class="empty-state"
+                >
+                  <q-icon name="restaurant_off" size="80px" color="grey-5" />
+                  <p>No hay planes de alimentación prescritos.</p>
+                </div>
+
+                <AlimentacionPanel
+                  ref="panelAlimentacionRef"
+                  v-if="hayAlimentacionActiva"
+                  :internacion-id="internacionId"
+                  :tratamiento-id="dashboardData.tratamientos?.[0]?.id || null"
+                  @edit-request="abrirDialogoEditarAlimentacion"
+                />
+
+                <q-card
+                  v-for="alimentacion in alimentacionesSuspendidas"
+                  :key="alimentacion.id"
+                  flat
+                  bordered
+                  class="alimentacion-card"
+                >
+                  <q-card-section class="alimentacion-header">
+                    <div class="alimentacion-title">
+                      {{ alimentacion.tipo_dieta?.nombre || 'Dieta sin nombre' }}
+                    </div>
+                    <q-badge
+                      :color="getAlimentacionColorPorEstado(alimentacion.estado)"
+                      :label="getAlimentacionTextoEstado(alimentacion.estado)"
+                      class="status-badge-small"
+                    />
+                  </q-card-section>
+                  <q-card-section>
+                    <p><strong>Vía:</strong> {{ alimentacion.via_administracion }}</p>
+                    <p><strong>Observaciones:</strong> {{ alimentacion.descripcion }}</p>
+                    <q-list
+                      bordered
+                      separator
+                      dense
+                      v-if="alimentacion.tiempos && alimentacion.tiempos.length > 0"
+                      class="tiempos-list"
+                    >
+                      <q-item-label header dense>Tiempos de Comida</q-item-label>
+                      <q-item v-for="tiempo in alimentacion.tiempos" :key="tiempo.id" dense>
+                        <q-item-section>
+                          <q-item-label class="tiempo-name">{{ tiempo.tiempo_comida }}</q-item-label>
+                          <q-item-label caption>{{ tiempo.descripcion || 'Sin detalle' }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-card-section>
+                </q-card>
+             </div>
+          </q-tab-panel>
+
+          <!-- PANEL: PLAN DE CUIDADOS (EVOLUCIÓN) -->
+          <q-tab-panel name="plan-cuidados" class="q-pa-none">
+             <div class="panel-inner-content">
+               <div class="evolution-actions q-mb-md" v-if="!dashboardData.fecha_alta">
+                  <q-btn
+                    unelevated
+                    rounded
+                    color="secondary"
+                    icon="note_add"
+                    label="Añadir Nota de Evolución"
+                    @click="abrirDialogoEvolucion"
+                  />
+                </div>
+
+                <div v-if="notasDeEvolucion.length > 0" class="evolution-notes">
+                  <q-card
+                    v-for="control in notasDeEvolucion"
+                    :key="control.id"
+                    flat
+                    bordered
+                    class="note-card"
+                  >
+                    <q-card-section class="note-header">
+                      <div class="note-date">{{ formatDateTime(control.fecha_control) }}</div>
+                      <div class="note-author" v-if="control.user">
+                        Por: {{ control.user.nombre }} {{ control.user.apellidos }}
+                      </div>
+                    </q-card-section>
+                    <q-card-section class="note-content">
+                      {{ control.observaciones }}
+                    </q-card-section>
+                  </q-card>
+                </div>
+                 <div v-else class="empty-state">
+                  <q-icon name="history_edu" size="60px" color="grey-4" />
+                   <p class="text-grey-6 q-mt-sm">No hay notas de evolución registradas.</p>
+                </div>
+             </div>
+          </q-tab-panel>
+        </q-tab-panels>
       </div>
-
-      <div
-        v-if="!dashboardData.alimentaciones || !dashboardData.alimentaciones.length"
-        class="empty-state"
-      >
-        <q-icon name="restaurant_off" size="80px" color="grey-5" />
-        <p>No hay planes de alimentación prescritos.</p>
-      </div>
-
-      <AlimentacionPanel
-        ref="panelAlimentacionRef"
-        v-if="hayAlimentacionActiva"
-        :internacion-id="internacionId"
-        :tratamiento-id="dashboardData.tratamientos?.[0]?.id || null"
-        @edit-request="abrirDialogoEditarAlimentacion"
-      />
-
-      <q-card
-        v-for="alimentacion in alimentacionesSuspendidas"
-        :key="alimentacion.id"
-        flat
-        bordered
-        class="alimentacion-card"
-      >
-        <q-card-section class="alimentacion-header">
-          <div class="alimentacion-title">
-            {{ alimentacion.tipo_dieta?.nombre || 'Dieta sin nombre' }}
-          </div>
-          <q-badge
-            :color="getAlimentacionColorPorEstado(alimentacion.estado)"
-            :label="getAlimentacionTextoEstado(alimentacion.estado)"
-            class="status-badge-small"
-          />
-        </q-card-section>
-        <q-card-section>
-          <p><strong>Vía:</strong> {{ alimentacion.via_administracion }}</p>
-          <p><strong>Observaciones:</strong> {{ alimentacion.descripcion }}</p>
-          <q-list
-            bordered
-            separator
-            dense
-            v-if="alimentacion.tiempos && alimentacion.tiempos.length > 0"
-            class="tiempos-list"
-          >
-            <q-item-label header dense>Tiempos de Comida</q-item-label>
-            <q-item v-for="tiempo in alimentacion.tiempos" :key="tiempo.id" dense>
-              <q-item-section>
-                <q-item-label class="tiempo-name">{{ tiempo.tiempo_comida }}</q-item-label>
-                <q-item-label caption>{{ tiempo.descripcion || 'Sin detalle' }}</q-item-label>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card-section>
-      </q-card>
 
 
       <!-- Diálogos -->
@@ -435,6 +460,7 @@ export default defineComponent({
   },
   setup(props) {
     const internacionId = props.internacionId
+    const activeTab = ref('signos-vitales') // ✅ Added for tabs
     const isLoading = ref(true)
     const error = ref(null)
     const dashboardData = ref(null)
@@ -797,6 +823,7 @@ export default defineComponent({
     }
 
     return {
+      activeTab, // ✅ Added
       isLoading,
       error,
       dashboardData,
