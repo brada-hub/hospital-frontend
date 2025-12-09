@@ -3,8 +3,8 @@ import axios from 'axios'
 import { useUserStore } from 'stores/user'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://192.168.0.29:8000/api',
-  // withCredentials: true, // REMOVED: CORS cross-domain fix
+  // FALLBACK FORCE: Use Railway if env var is missing
+  baseURL: import.meta.env.VITE_API_URL || 'https://web-production-59875.up.railway.app/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -29,7 +29,8 @@ api.interceptors.response.use(
   async (error) => {
     // DEBUG: Mostrar error en pantalla para móvil
     if (error.message === 'Network Error') {
-        alert('Network Error: Fallo de conexión. \n1. Verifica tu IP: 192.168.0.29 \n2. ¿Backend corriendo? \n3. Detalles: ' + JSON.stringify(error.toJSON ? error.toJSON() : error))
+        const urlUsada = error.config?.baseURL || 'Desconocida';
+        alert('❌ Error de conexión: \nIntentando conectar a:\n' + urlUsada + '\n\nDetalles: ' + JSON.stringify(error.toJSON ? error.toJSON() : error))
     }
 
     // CAMBIADO: Se añade una condición para evitar el bucle de logout.

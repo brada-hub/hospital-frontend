@@ -180,17 +180,21 @@ function onDescripcionChange(value) {
   }
 }
 
-
 watch(
   () => props.cuidadosIniciales,
   (newCuidados) => {
+    // Evitar actualización si los datos son idénticos (rompe el bucle infinito)
+    if (JSON.stringify(newCuidados) === JSON.stringify(cuidados.value)) {
+      return
+    }
+
     if (newCuidados && newCuidados.length > 0) {
       cuidados.value = newCuidados.map((c) => ({ ...c }))
     } else if (newCuidados && newCuidados.length === 0 && cuidados.value.length > 0) {
       cuidados.value = []
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 )
 
 async function agregarCuidado() {
@@ -274,7 +278,7 @@ watch(
   (newValue) => {
     emit('update:cuidados', newValue)
   },
-  { deep: true }
+  { deep: true },
 )
 </script>
 
@@ -382,9 +386,16 @@ watch(
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
 }
 
 .btn-add {
