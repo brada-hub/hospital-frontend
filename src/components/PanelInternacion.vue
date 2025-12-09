@@ -587,14 +587,20 @@ export default defineComponent({
 
     async function suspenderTratamiento(id) {
       Dialog.create({
-        title: 'Confirmar suspensión',
-        message: '¿Desea suspender este tratamiento completo?',
+        title: 'Confirmar suspensión de tratamiento',
+        message: 'Por favor, indique el motivo de la suspensión (mínimo 10 caracteres):',
+        prompt: {
+          model: '',
+          type: 'textarea', // Usar textarea para escribir más cómodo
+          isValid: val => val.length >= 10, // Validación local
+        },
         cancel: true,
         persistent: true,
-      }).onOk(async () => {
+      }).onOk(async (motivo) => {
         try {
           Loading.show({ message: 'Suspendiendo tratamiento...' })
-          await api.post(`/tratamientos/${id}/suspender`)
+          // Se envía el motivo en el body
+          await api.post(`/tratamientos/${id}/suspender`, { motivo })
           Notify.create({ type: 'positive', message: 'Tratamiento suspendido correctamente.' })
           await fetchData()
         } catch (err) {
@@ -610,14 +616,19 @@ export default defineComponent({
 
     async function suspenderReceta(id) {
       Dialog.create({
-        title: 'Suspender medicamento',
-        message: '¿Desea suspender este medicamento del tratamiento?',
+        title: 'Confirmar suspensión de medicamento',
+        message: 'Por favor, indique el motivo de la suspensión (mínimo 10 caracteres):',
+        prompt: {
+          model: '',
+          type: 'textarea',
+          isValid: val => val.length >= 10,
+        },
         cancel: true,
         persistent: true,
-      }).onOk(async () => {
+      }).onOk(async (motivo) => {
         try {
           Loading.show({ message: 'Suspendiendo medicamento...' })
-          await api.post(`/recetas/${id}/suspender`)
+          await api.post(`/recetas/${id}/suspender`, { motivo })
           Notify.create({ type: 'positive', message: 'Medicamento suspendido correctamente.' })
           await fetchData()
         } catch (err) {

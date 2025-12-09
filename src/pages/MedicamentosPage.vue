@@ -517,6 +517,23 @@ onMounted(fetchData)
   flex-wrap: wrap;
 }
 
+@media (max-width: 600px) {
+  .table-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .table-search {
+    max-width: 100%;
+    min-width: unset;
+  }
+
+  .btn-agregar {
+    width: 100%;
+  }
+}
+
 .table-search {
   flex-grow: 1;
   min-width: 250px;

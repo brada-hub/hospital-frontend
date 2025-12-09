@@ -251,38 +251,36 @@ const deleteRol = async (rol) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 32px;
+  flex-wrap: wrap; /* ✅ Update */
+  gap: 16px; /* ✅ Update */
 }
-.titulo-principal {
-  background: linear-gradient(135deg, #0f3027 0%, #082f49 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-weight: 900;
-  font-size: 1.75rem;
-  margin: 0;
-}
-.btn-agregar {
-  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
-  color: white;
-  font-weight: 700;
-  padding: 10px 20px;
-  border-radius: 12px;
-}
-/* ... resto de tus estilos de cards ... */
+
+/* ... */
+
 .roles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* ✅ Update: Reduced from 350px */
   gap: 24px;
   align-items: flex-start;
 }
-.rol-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+
+/* ✅ Media Query for Mobile */
+@media (max-width: 600px) {
+  .header-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .btn-agregar {
+    width: 100%;
+  }
+
+  .roles-grid {
+     grid-template-columns: 1fr; /* Stack on mobile */
+  }
 }
+
 .card-header {
   background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   color: white;
