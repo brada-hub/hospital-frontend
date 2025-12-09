@@ -32,7 +32,7 @@
               <template v-slot:prepend><q-icon name="description" /></template>
             </q-input>
           </div>
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-6" style="display: none">
             <q-input
               outlined
               readonly

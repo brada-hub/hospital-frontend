@@ -244,7 +244,7 @@
         ref="panelAlimentacionRef"
         v-if="hayAlimentacionActiva"
         :internacion-id="internacionId"
-        :tratamiento-id="dashboardData.tratamientos?.[0]?.id"
+        :tratamiento-id="dashboardData.tratamientos?.[0]?.id || null"
         @edit-request="abrirDialogoEditarAlimentacion"
       />
 

@@ -1,11 +1,14 @@
 <template>
   <q-card>
-    <q-card-section>
-      <div class="text-h6">Alimentación</div>
+    <q-card-section class="bg-teal-1 text-teal-9">
+      <div class="text-h6 flex items-center">
+        <q-icon name="restaurant_menu" class="q-mr-sm" />
+        Alimentación
+      </div>
     </q-card-section>
 
     <q-card-section>
-      <q-form @submit="onSubmit" class="q-gutter-md">
+      <q-form @submit="onSubmit" @validation-error="onValidationError" ref="formRef" class="q-gutter-md">
         <!-- Tipo de Dieta -->
         <q-select
           v-model="form.tipo_dieta_id"
@@ -17,8 +20,12 @@
           label="Tipo de Dieta"
           outlined
           dense
+          color="teal"
           :rules="[(val) => !!val || 'Campo requerido']"
         >
+          <template v-slot:prepend>
+            <q-icon name="local_dining" color="teal" />
+          </template>
           <template v-slot:option="scope">
             <q-item v-bind="scope.itemProps">
               <q-item-section>
@@ -36,8 +43,13 @@
           label="Vía de Administración"
           outlined
           dense
+          color="teal"
           :rules="[(val) => !!val || 'Campo requerido']"
-        />
+        >
+            <template v-slot:prepend>
+            <q-icon name="alt_route" color="teal" />
+          </template>
+        </q-select>
 
         <!-- Frecuencia (1-5 tiempos) -->
         <q-select
@@ -46,18 +58,24 @@
           label="Frecuencia (Número de tiempos)"
           outlined
           dense
+          color="teal"
           :rules="[(val) => !!val || 'Campo requerido']"
           @update:model-value="onFrecuenciaChange"
-        />
+        >
+            <template v-slot:prepend>
+            <q-icon name="access_time" color="teal" />
+          </template>
+        </q-select>
 
         <!-- Tiempos de Comida Dinámicos -->
         <div v-if="form.frecuencia_tiempos" class="q-gutter-sm">
-          <div class="text-subtitle2 q-mb-sm">Distribución de Tiempos de Comida</div>
+          <div class="text-subtitle2 q-mb-sm text-teal">Distribución de Tiempos de Comida</div>
 
           <div
             v-for="(tiempo, index) in tiemposComida"
             :key="index"
-            class="q-pa-sm bg-grey-2 rounded-borders"
+            class="q-pa-sm bg-teal-50 rounded-borders"
+            style="border: 1px solid #ccfbf1"
           >
             <div class="row q-col-gutter-sm items-center">
               <div class="col-12 col-md-4">
@@ -68,6 +86,7 @@
                   dense
                   readonly
                   filled
+                  color="teal"
                 />
               </div>
               <div class="col-12 col-md-8">
@@ -76,6 +95,7 @@
                   label="Descripción de lo que se dará"
                   outlined
                   dense
+                  color="teal"
                   placeholder="Ej: Leche materna, papilla de frutas, etc."
                   :rules="[(val) => !!val || 'Describa qué se dará en este tiempo']"
                 />
@@ -92,7 +112,12 @@
           outlined
           dense
           rows="2"
-        />
+          color="teal"
+        >
+            <template v-slot:prepend>
+            <q-icon name="block" color="teal" />
+          </template>
+        </q-input>
 
         <!-- Descripción/Observaciones -->
         <q-input
@@ -102,8 +127,13 @@
           outlined
           dense
           rows="3"
+          color="teal"
           :rules="[(val) => !!val || 'Campo requerido']"
-        />
+        >
+            <template v-slot:prepend>
+            <q-icon name="note" color="teal" />
+          </template>
+        </q-input>
 
         <!-- Fechas -->
         <div class="row q-col-gutter-sm">
@@ -114,8 +144,16 @@
               type="datetime-local"
               outlined
               dense
-              :rules="[(val) => !!val || 'Campo requerido']"
-            />
+              color="teal"
+              :rules="[
+                (val) => !!val || 'Campo requerido',
+                validarFechaInicio
+              ]"
+            >
+                <template v-slot:prepend>
+                <q-icon name="event" color="teal" />
+              </template>
+            </q-input>
           </div>
           <div class="col-12 col-md-6">
             <q-input
@@ -124,15 +162,23 @@
               type="datetime-local"
               outlined
               dense
-              :rules="[(val) => !!val || 'Campo requerido']"
-            />
+              color="teal"
+              :rules="[
+                (val) => !!val || 'Campo requerido',
+                validarFechaFin
+              ]"
+            >
+                <template v-slot:prepend>
+                <q-icon name="event_busy" color="teal" />
+              </template>
+            </q-input>
           </div>
         </div>
 
         <!-- Botones -->
         <div class="row q-gutter-sm justify-end">
           <q-btn label="Cancelar" color="grey" flat @click="$emit('cancel')" />
-          <q-btn label="Guardar" type="submit" color="primary" :loading="loading" />
+          <q-btn label="Guardar" type="submit" color="teal" :loading="loading" icon="save" />
         </div>
       </q-form>
     </q-card-section>
@@ -238,7 +284,38 @@ function onFrecuenciaChange(newFrecuencia) {
   generarTiemposComida(newFrecuencia)
 }
 
+// Validaciones de Fecha
+function validarFechaInicio(val) {
+  if (!val) return true
+  const fechaInicio = new Date(val)
+  const ahora = new Date()
+  // Restamos 1 minuto para dar margen si es "justo ahora"
+  ahora.setMinutes(ahora.getMinutes() - 1)
+
+  if (fechaInicio < ahora) {
+    return 'La fecha de inicio no puede ser anterior a la actual'
+  }
+  return true
+}
+
+function validarFechaFin(val) {
+  if (!val || !form.value.fecha_inicio) return true
+
+  const fechaInicio = new Date(form.value.fecha_inicio)
+  const fechaFin = new Date(val)
+
+  if (fechaFin <= fechaInicio) {
+    return 'La fecha fin debe ser posterior a la fecha de inicio'
+  }
+  return true
+}
+
+const formRef = ref(null)
+
 async function onSubmit() {
+  // Nota: La validación de los campos q-input/q-select se hace automáticamente al enviar
+  // pero la validación manual de tiempos de comida la hacemos aquí.
+
   // Validar que todos los tiempos tengan descripción
   const tiemposSinDescripcion = tiemposComida.value.filter((t) => !t.descripcion)
   if (tiemposSinDescripcion.length > 0) {
@@ -246,13 +323,21 @@ async function onSubmit() {
       type: 'warning',
       message: 'Por favor complete la descripción de todos los tiempos de comida',
     })
+    // Scroll al área de tiempos
+    const tiemposElement = document.querySelector('.text-subtitle2.q-mb-sm.text-teal')
+    if (tiemposElement) {
+       tiemposElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
     return
   }
+
+  // Si hay algún error de validación nativo de Quasar (rules),
+  // el submit no se dispara si usamos @submit en q-form.
+  // Pero si se dispara, asumimos que los rules pasaron o need to check manual.
 
   loading.value = true
 
   try {
-    // <CHANGE> Enviar 'tiempos' en lugar de 'tiempos_comida' para coincidir con el backend
     const data = {
       internacion_id: props.internacionId,
       tipo_dieta_id: form.value.tipo_dieta_id,
@@ -267,16 +352,10 @@ async function onSubmit() {
 
     if (props.alimentacion) {
       await api.put(`/alimentaciones/${props.alimentacion.id}`, data)
-      $q.notify({
-        type: 'positive',
-        message: 'Alimentación actualizada correctamente',
-      })
+      // Eliminamos la notificación duplicada aquí
     } else {
       await api.post('/alimentaciones', data)
-      $q.notify({
-        type: 'positive',
-        message: 'Alimentación registrada correctamente',
-      })
+      // Eliminamos la notificación duplicada aquí
     }
 
     emit('saved')
@@ -288,6 +367,13 @@ async function onSubmit() {
     })
   } finally {
     loading.value = false
+  }
+}
+
+function onValidationError(ref) {
+  // Esta función se puede usar si enlazamos el evento @validation-error en q-form
+  if (ref) {
+    ref.$el.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 }
 
