@@ -4,7 +4,7 @@
     <!-- Header elegante - Ahora full width -->
     <div class="page-header">
       <div class="header-content">
-        <q-icon name="local_hospital" size="48px" class="header-icon" />
+
         <div class="header-text">
           <h1 class="page-title">Nueva Admisión de Paciente</h1>
           <p class="page-subtitle">Complete los siguientes pasos para registrar la internación</p>
@@ -413,18 +413,19 @@ export default defineComponent({
 
 <style scoped>
 /* Eliminado max-width, ahora full responsive */
+/* Eliminado max-width, ahora full responsive */
 .page-background {
-  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  background: #f8fafc;
   min-height: 100vh;
 }
 
 .page-header {
-  background: white;
-  border-radius: 16px;
-  padding: clamp(16px, 4vw, 32px);
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
   margin-bottom: clamp(16px, 4vw, 32px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  border: 2px solid #e2e8f0;
+  box-shadow: none;
+  border: none;
 }
 
 .header-content {
@@ -435,14 +436,7 @@ export default defineComponent({
   flex-wrap: wrap;
 }
 
-.header-icon {
-  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
-  color: white;
-  padding: clamp(12px, 3vw, 16px);
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
-  flex-shrink: 0;
-}
+
 
 .header-text {
   flex: 1;
@@ -450,20 +444,28 @@ export default defineComponent({
 }
 
 .page-title {
-  background: linear-gradient(135deg, #0f3027 0%, #082f49 100%);
+
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
   -webkit-background-clip: text;
-  background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-weight: 900;
-  font-size: clamp(1.25rem, 4vw, 2rem);
+  background-clip: text;
   margin: 0 0 8px 0;
   line-height: 1.2;
+
+
+
 }
 
 .page-subtitle {
+
+
+  font-size: clamp(0.9rem, 1.5vw, 1.1rem);
   color: #64748b;
-  font-size: clamp(0.875rem, 2vw, 1rem);
   margin: 0;
+  font-weight: 500;
+
 }
 
 .progress-indicator {

@@ -756,7 +756,7 @@ onMounted(fetchPacientes)
 <style scoped>
 .pacientes-container {
   padding: 24px;
-  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  background: #f8fafc;
   min-height: 100vh;
 }
 
@@ -765,19 +765,21 @@ onMounted(fetchPacientes)
 }
 
 .titulo-principal {
-  background: linear-gradient(135deg, #0f3027 0%, #082f49 100%);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
   -webkit-background-clip: text;
-  background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-weight: 900;
-  font-size: 1.75rem;
+  background-clip: text;
   margin: 0 0 8px 0;
+  line-height: 1.2;
 }
 
 .subtitulo {
+  font-size: clamp(0.9rem, 1.5vw, 1.1rem);
   color: #64748b;
-  font-size: 1rem;
   margin: 0;
+  font-weight: 500;
 }
 
 .table-container-card {

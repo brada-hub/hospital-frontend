@@ -2,7 +2,7 @@
   <q-page class="dashboard-page">
     <!-- Header mejorado con animación de gradiente -->
     <div class="header-section">
-      <div class="header-glow"></div>
+
       <div class="header-content">
         <h1 class="titulo-dashboard">Dashboard de Gestión</h1>
         <p class="subtitulo-dashboard">Vista consolidada de las operaciones del hospital</p>
@@ -380,7 +380,7 @@ onMounted(() => {
 <style lang="scss" scoped>
 .dashboard-page {
   padding: 24px;
-  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 50%, #eff6ff 100%);
+  background: #f8fafc;
   min-height: 100vh;
 }
 
@@ -389,38 +389,30 @@ onMounted(() => {
   position: relative;
   margin-bottom: 32px;
 
-  .header-glow {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, #14b8a6, #06b6d4, #3b82f6);
-    opacity: 0.1;
-    filter: blur(60px);
-    pointer-events: none;
-  }
-
   .header-content {
     position: relative;
     z-index: 1;
   }
 
   .titulo-dashboard {
-    font-size: 2.25rem;
-    font-weight: 900;
-    background: linear-gradient(135deg, #0f766e, #0e7490, #1e40af);
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    font-weight: 700;
+    background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     margin: 0 0 8px 0;
-    letter-spacing: -0.5px;
+    line-height: 1.2;
   }
 
   .subtitulo-dashboard {
     color: #64748b;
-    font-size: 1.125rem;
+    font-size: clamp(0.9rem, 1.5vw, 1.1rem);
     margin: 0;
     display: flex;
     align-items: center;
     gap: 8px;
+    font-weight: 500;
 
     .heart-icon {
       color: #ef4444;

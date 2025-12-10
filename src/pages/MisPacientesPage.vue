@@ -4,9 +4,7 @@
     <div v-if="!mostrarPanel" class="page-container">
       <div class="header-section">
         <div class="header-content">
-          <div class="header-icon">
-            <q-icon name="personal_injury" size="48px" />
-          </div>
+
           <div>
             <h1 class="page-title">Mis Pacientes Internados</h1>
             <p class="page-subtitle">Lista de pacientes actualmente bajo tu responsabilidad</p>
@@ -197,52 +195,46 @@ function cerrarPanel() {
 
 <style scoped>
 .mis-pacientes-page {
-  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  background: #f8fafc;
   min-height: 100vh;
 }
 
 .page-container {
-  max-width: 1400px;
+  /* Removed max-width for full width goodness */
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: clamp(16px, 2vw, 32px);
 }
 
 /* Header Section */
 .header-section {
-  margin-bottom: 40px;
+  margin-bottom: clamp(24px, 4vw, 40px);
   animation: fadeInDown 0.6s ease-out;
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: clamp(16px, 2vw, 20px);
 }
 
-.header-icon {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 8px 16px rgba(13, 148, 136, 0.3);
-}
+
 
 .page-title {
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: 700;
-  color: #0f172a;
-  margin: 0;
+  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 8px 0;
   line-height: 1.2;
 }
 
 .page-subtitle {
-  font-size: 1rem;
+  font-size: clamp(0.9rem, 1.5vw, 1.1rem);
   color: #64748b;
-  margin: 8px 0 0 0;
+  margin: 0;
+  font-weight: 500;
 }
 
 /* Loading State */
@@ -296,10 +288,10 @@ function cerrarPanel() {
   margin: 0;
 }
 
-/* Patients Grid */
+/* Patients Grid - Fluid! */
 .patients-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 24px;
 }
 
@@ -376,7 +368,7 @@ function cerrarPanel() {
 
 .info-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
 }
 
@@ -451,10 +443,11 @@ function cerrarPanel() {
   transform: translateY(0);
 }
 
-/* Panel Container */
+/* Panel Container - Full Width */
 .panel-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  /* No max-width here either to ensure child PanelInternacion takes full space */
 }
 
 .panel-header {
@@ -486,7 +479,7 @@ function cerrarPanel() {
 }
 
 .panel-title {
-  font-size: 1.75rem;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
   font-weight: 700;
   color: white;
   margin: 0;
@@ -494,6 +487,7 @@ function cerrarPanel() {
 
 .panel-content {
   padding: 0;
+  /* PanelInternacion component should handle its own padding/layout */
 }
 
 /* Animations */
@@ -519,98 +513,26 @@ function cerrarPanel() {
   }
 }
 
-/* Responsive Design */
-@media (max-width: 1024px) {
-  .patients-grid {
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  }
-}
-
+/* Responsive Design Tweaks */
 @media (max-width: 768px) {
-  .page-container {
-    padding: 24px 16px;
-  }
-
   .header-content {
     flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
   }
 
-  .header-icon {
-    width: 64px;
-    height: 64px;
-  }
-
-  .page-title {
-    font-size: 1.5rem;
-  }
-
+  /* Grid automatically handles reducing columns, but we can ensure single col on very small screens */
   .patients-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .info-row {
-    grid-template-columns: 1fr;
+    gap: 16px;
   }
 
   .status-badge {
     position: static;
-    align-self: flex-start;
     margin-top: 12px;
   }
 
   .card-header {
     flex-wrap: wrap;
   }
-
-  .panel-header {
-    padding: 16px 20px;
-  }
-
-  .panel-title {
-    font-size: 1.25rem;
-  }
 }
 
-@media (max-width: 480px) {
-  .page-container {
-    padding: 16px 12px;
-  }
-
-  .page-title {
-    font-size: 1.25rem;
-  }
-
-  .page-subtitle {
-    font-size: 0.875rem;
-  }
-
-  .card-header {
-    padding: 16px;
-  }
-
-  .card-body {
-    padding: 16px;
-  }
-
-  .patient-name {
-    font-size: 1.125rem;
-  }
-
-  .view-panel-btn {
-    padding: 12px 20px;
-    font-size: 0.9375rem;
-  }
-
-  .panel-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .back-btn {
-    align-self: flex-start;
-  }
-}
 </style>

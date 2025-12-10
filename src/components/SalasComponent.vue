@@ -309,15 +309,9 @@ onMounted(() => {
 }
 .salas-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
   margin-top: 24px;
-}
-@media (min-width: 1200px) {
-  .salas-grid {
-    gap: 24px;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
 }
 .sala-card {
   background: white;

@@ -290,9 +290,9 @@ const saveHospital = async () => {
   background: #f8fafc;
 }
 .hospital-container {
-  max-width: 1400px;
+  /* Removed max-width */
   margin: 0 auto;
-  padding: 24px;
+  padding: clamp(16px, 2vw, 32px);
 }
 .page-header {
   margin-bottom: 32px;
@@ -300,8 +300,8 @@ const saveHospital = async () => {
 }
 .page-title {
   margin: 0 0 8px 0;
-  font-size: 2.25rem;
-  font-weight: 600;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 700;
   background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -311,8 +311,8 @@ const saveHospital = async () => {
 .page-subtitle {
   margin: 0;
   color: #64748b;
-  font-size: 1.125rem;
-  font-weight: 400;
+  font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+  font-weight: 500;
 }
 .elegant-card {
   border-radius: 16px;

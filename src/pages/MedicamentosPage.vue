@@ -415,7 +415,7 @@ onMounted(fetchData)
 
 .page-title {
   margin: 0 0 8px 0;
-  font-size: 2.25rem;
+  font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: 700;
   background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
   -webkit-background-clip: text;
@@ -427,7 +427,8 @@ onMounted(fetchData)
 .page-subtitle {
   margin: 0;
   color: #64748b;
-  font-size: 1.125rem;
+  font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+  font-weight: 500;
 }
 
 /* === TARJETA PRINCIPAL === */

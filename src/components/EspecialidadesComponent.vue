@@ -241,7 +241,7 @@ onMounted(() => {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 900;
-  font-size: 1.75rem;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
   margin: 0;
 }
 .btn-agregar {

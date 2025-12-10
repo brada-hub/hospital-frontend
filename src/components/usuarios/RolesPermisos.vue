@@ -3,14 +3,12 @@
     <div class="header-section">
       <h2 class="titulo-principal">Roles y Permisos</h2>
       <q-btn
-        class="btn-agregar shadow-1"
+        class="btn-agregar"
         label="Crear Rol"
         icon="add"
         @click="openAddRolDialog"
         no-caps
         rounded
-        color="white"
-        text-color="teal-9"
       />
     </div>
     <div class="roles-grid">
@@ -243,7 +241,7 @@ const deleteRol = async (rol) => {
 /* Tus estilos originales */
 .roles-container {
   padding: 24px;
-  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  background: #f8fafc;
   min-height: auto;
 }
 .header-section {
@@ -253,6 +251,27 @@ const deleteRol = async (rol) => {
   margin-bottom: 32px;
   flex-wrap: wrap; /* ✅ Update */
   gap: 16px; /* ✅ Update */
+}
+
+/* ✅ Estilo del Título Principal (Nuevo) */
+.titulo-principal {
+  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  margin: 0 0 8px 0;
+  line-height: 1.2;
+}
+
+/* ✅ Estilo del Botón de Agregar (Actualizado) */
+.btn-agregar {
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  color: white;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 12px;
 }
 
 /* ... */

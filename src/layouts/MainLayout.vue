@@ -6,8 +6,8 @@
           <q-icon name="local_hospital" size="28px" class="hospital-icon" />
         </div>
         <div class="hospital-info">
-          <div class="hospital-name">{{ hospitalName || 'Mi Hospital' }}</div>
-          <div class="hospital-subtitle">Sistema de Gestión</div>
+          <div class="hospital-name">{{ hospitalName  }}</div>
+          <div class="hospital-subtitle">Sistema de Seguimiento al Tratamiento y Evolucion de Pacientes Internados</div>
         </div>
       </div>
       <q-list class="navigation-menu">
@@ -188,7 +188,7 @@
       <q-toolbar class="header-toolbar">
         <q-btn flat dense round icon="menu" @click="drawer = !drawer" class="menu-btn" />
         <q-toolbar-title class="header-title">
-          <span class="title-text">Dashboard Principal</span>
+          <span class="title-text">{{ pageTitle }}</span>
         </q-toolbar-title>
         <div class="header-actions">
           <NotificationBell v-if="userStore.hasPermission('acceso.mis-pacientes')" />
@@ -256,13 +256,16 @@
 import { ref, computed } from 'vue'
 import { useUserStore } from 'stores/user'
 import { useQuasar } from 'quasar'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import UserProfileModal from 'components/UserProfileModal.vue'
 import NotificationBell from 'components/NotificationBell.vue'
 
 const userStore = useUserStore()
 const $q = useQuasar()
 const router = useRouter()
+const route = useRoute()
+
+const pageTitle = computed(() => route.meta.title || 'Sistema Hospitalario')
 
 const hospitalName = computed(() => userStore.hospital?.nombre || 'Mi Hospital')
 const userName = computed(() =>

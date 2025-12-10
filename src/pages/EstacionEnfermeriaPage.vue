@@ -4,9 +4,7 @@
     <div v-if="!mostrarPanel" class="page-container">
       <div class="estacion-header">
         <div class="header-content">
-          <div class="header-icon">
-            <q-icon name="local_hospital" size="48px" />
-          </div>
+
           <div class="header-text">
             <h1 class="header-title">Estación de Enfermería</h1>
             <p class="header-subtitle">Pacientes internados actualmente</p>
@@ -441,53 +439,50 @@ onMounted(fetchPacientes)
 <style scoped>
 .estacion-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  background: #f8fafc;
 }
 
 .page-container {
-  max-width: 1400px;
+  /* Removed max-width */
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: clamp(16px, 2vw, 32px);
 }
 
 /* Header */
 .estacion-header {
-  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
-  border-radius: 16px;
-  padding: 32px;
-  margin-bottom: 32px;
-  box-shadow: 0 4px 20px rgba(13, 148, 136, 0.2);
+  background: transparent;
+  padding: 0;
+  margin-bottom: clamp(24px, 3vw, 32px);
+  box-shadow: none;
+  border-radius: 0;
   animation: slideDown 0.5s ease-out;
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: clamp(16px, 2vw, 20px);
+  flex-wrap: wrap;
 }
 
-.header-icon {
-  width: 80px;
-  height: 80px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
+
 
 .header-title {
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: 700;
-  color: white;
+  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin: 0 0 8px 0;
+  line-height: 1.2;
 }
 
 .header-subtitle {
-  font-size: 1rem;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+  color: #64748b;
   margin: 0;
+  font-weight: 500;
 }
 
 /* Loading y Empty States */
@@ -519,10 +514,10 @@ onMounted(fetchPacientes)
   margin: 0;
 }
 
-/* Grid de Pacientes */
+/* Grid de Pacientes - FLUID */
 .pacientes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 24px;
 }
 
@@ -703,7 +698,7 @@ onMounted(fetchPacientes)
 }
 
 .panel-title {
-  font-size: 1.75rem;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
   font-weight: 700;
   color: white;
   margin: 0;
@@ -725,7 +720,7 @@ onMounted(fetchPacientes)
 }
 
 .tabs-wrapper {
-  max-width: 1400px;
+  /* Removed max-width */
   margin: 0 auto;
   display: flex;
   gap: 8px;
@@ -762,9 +757,9 @@ onMounted(fetchPacientes)
 
 /* Contenido */
 .tab-content {
-  max-width: 1400px;
+  /* Removed max-width */
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: clamp(16px, 2vw, 32px);
 }
 
 .content-section {

@@ -25,27 +25,7 @@
             </div>
 
             <div class="text-h3 q-mb-md text-center font-weight-bold hospital-title">
-              Mi Hospital
-            </div>
-
-            <div class="text-body1 text-center q-mb-xl hospital-description">
-              Gestión integral de pacientes y personal médico con la mejor tecnología y cuidado
-              personalizado.
-            </div>
-
-            <div class="row q-gutter-lg">
-              <div class="flex items-center">
-                <div class="status-indicator status-secure"></div>
-                <span class="text-body2 q-ml-sm">Seguro</span>
-              </div>
-              <div class="flex items-center">
-                <div class="status-indicator status-reliable"></div>
-                <span class="text-body2 q-ml-sm">Confiable</span>
-              </div>
-              <div class="flex items-center">
-                <div class="status-indicator status-modern"></div>
-                <span class="text-body2 q-ml-sm">Moderno</span>
-              </div>
+              Sistema de Seguimiento al Tratamiento y Evolucion de Pacientes Internados
             </div>
           </div>
 
