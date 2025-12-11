@@ -211,6 +211,7 @@ const getNotificationColor = (tipo) => {
     critica: 'red',
     advertencia: 'orange',
     recordatorio: 'blue',
+    informacion: 'teal', // ✅ Added teal for info
   }
   return colors[tipo] || 'grey'
 }
@@ -220,6 +221,7 @@ const getNotificationIcon = (tipo) => {
     critica: 'warning',
     advertencia: 'info',
     recordatorio: 'event',
+    informacion: 'person_add', // ✅ Added person_add for info
   }
   return icons[tipo] || 'notifications'
 }

@@ -138,6 +138,29 @@ onMounted(() => {
   fetchMisPacientes()
 })
 
+// ✅ WATCHER: Detectar cambios en la URL (para clicks en notificaciones estando ya aquí)
+import { watch } from 'vue'
+
+watch(
+  () => route.query.internacion,
+  (newId) => {
+    if (newId) {
+      if (!internaciones.value.length) return // Si aún no cargan, lo manejará el fetch
+
+      const internacionExists = internaciones.value.some((i) => i.id === parseInt(newId))
+      if (internacionExists) {
+        abrirPanelClinico(parseInt(newId))
+      } else {
+        Notify.create({
+          color: 'warning',
+          message: 'El paciente de la notificación no está en tu lista actual.',
+          icon: 'warning',
+        })
+      }
+    }
+  },
+)
+
 async function fetchMisPacientes() {
   isLoading.value = true
   try {
