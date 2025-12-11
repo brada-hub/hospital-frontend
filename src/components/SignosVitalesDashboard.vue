@@ -190,7 +190,7 @@ function getChartOptions(title, unit) {
     },
     markers: {
       size: 5,
-      colors: ['#10b981', '#ef4444'],
+      colors: ['#10b981'],
       strokeColors: '#fff',
       strokeWidth: 2,
       hover: { size: 7 },
@@ -305,7 +305,7 @@ const chartData = computed(() => {
     control.valores.forEach((valor) => {
       const nombreSigno = valor.signo.nombre
       if (!dataAgrupada[nombreSigno]) {
-        dataAgrupada[nombreSigno] = { data: [], alertPoints: [], unidad: valor.signo.unidad }
+        dataAgrupada[nombreSigno] = { data: [], unidad: valor.signo.unidad }
       }
 
       const usuarioNombre = `${control.user.nombre} ${control.user.apellidos}`
@@ -325,13 +325,6 @@ const chartData = computed(() => {
       }
 
       dataAgrupada[nombreSigno].data.push(commonPointData)
-
-      const rango = rangosNormales[nombreSigno]
-      if (rango && (yValue < rango.min || yValue > rango.max)) {
-        dataAgrupada[nombreSigno].alertPoints.push(commonPointData)
-      } else {
-        dataAgrupada[nombreSigno].alertPoints.push({ x: xValue, y: null })
-      }
     })
   })
 
@@ -342,7 +335,6 @@ const chartData = computed(() => {
       unidad: dataAgrupada[signoNombre].unidad,
       series: [
         { name: signoNombre, data: dataAgrupada[signoNombre].data },
-        { name: 'Alerta', data: dataAgrupada[signoNombre].alertPoints, type: 'scatter' },
       ],
     }))
 })

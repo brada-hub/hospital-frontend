@@ -2,7 +2,7 @@
   <q-form ref="formRef" class="q-gutter-y-md q-pt-md">
     <q-card class="styled-card" flat bordered>
       <q-card-section>
-        <div class="text-h6 text-primary">
+        <div class="text-h6 text-teal">
           <q-icon name="medical_services" class="q-mr-sm" />
           {{ tratamientoParaEditar ? 'Modificar' : 'Prescribir' }} Tratamiento
         </div>
@@ -89,7 +89,7 @@
             <q-btn
               label="Nuevo Medicamento"
               icon="add_circle"
-              color="primary"
+              color="teal"
               outline
               class="full-width q-py-md"
               @click="abrirDialogoNuevoMedicamento"

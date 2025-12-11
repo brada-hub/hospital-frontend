@@ -27,8 +27,9 @@
       v-model="step"
       ref="stepper"
       color="teal"
+      active-color="teal"
+      done-color="teal"
       animated
-      header-nav
       flat
       class="styled-stepper"
       keep-alive
@@ -75,7 +76,7 @@
       >
         <div class="step-content">
           <div class="step-header">
-            <q-icon name="monitor_heart" size="32px" color="red-6" />
+            <q-icon name="monitor_heart" size="32px" color="teal" />
             <div>
               <h3 class="step-title">Registro de Datos Clínicos</h3>
               <p class="step-description">
@@ -122,7 +123,7 @@
       >
         <div class="step-content">
           <div class="step-header">
-            <q-icon name="health_and_safety" size="32px" color="blue-6" />
+            <q-icon name="health_and_safety" size="32px" color="teal" />
             <div>
               <h3 class="step-title">Plan de Cuidados Inicial</h3>
               <p class="step-description">
@@ -184,16 +185,7 @@
           </p>
 
           <div class="success-actions">
-            <q-btn
-              :to="`/pacientes/internacion/${nuevaInternacionId}`"
-              unelevated
-              label="Ver Panel del Paciente"
-              color="primary"
-              size="lg"
-              v-if="nuevaInternacionId"
-              icon="visibility"
-              class="action-btn primary-action"
-            />
+
             <q-btn
               flat
               @click="reiniciarProceso"
@@ -205,14 +197,7 @@
             />
           </div>
 
-          <div class="success-info">
-            <q-icon name="info_outline" size="20px" />
-            <span
-              >Puede continuar configurando tratamientos, alimentación y otros detalles desde el
-              panel del paciente</span
-            >
           </div>
-        </div>
       </q-step>
     </q-stepper>
   </q-page>
@@ -694,19 +679,7 @@ export default defineComponent({
   transform: translateY(-2px);
 }
 
-.success-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #f0f9ff;
-  border-left: 4px solid #3b82f6;
-  padding: clamp(12px, 3vw, 16px) clamp(16px, 4vw, 24px);
-  border-radius: 8px;
-  max-width: 600px;
-  color: #1e40af;
-  font-size: clamp(0.85rem, 2vw, 0.95rem);
-  text-align: left;
-}
+
 
 /* Media queries mejoradas para full responsive */
 @media (max-width: 1024px) {
@@ -760,10 +733,5 @@ export default defineComponent({
   }
 }
 
-@media (max-width: 480px) {
-  .success-info {
-    flex-direction: column;
-    text-align: center;
-  }
-}
+
 </style>

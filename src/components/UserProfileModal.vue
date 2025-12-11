@@ -166,6 +166,7 @@ watch(
       }
     }
   },
+  { immediate: true }
 )
 
 // Lógica para llamar al endpoint /user/profile

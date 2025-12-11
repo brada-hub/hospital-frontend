@@ -54,15 +54,20 @@
           <div class="action-buttons">
             <template v-if="!dashboardData.fecha_alta">
               <q-btn
-                v-if="!hayTratamientoActivo"
+                v-if="!dashboardData.fecha_alta"
                 unelevated
                 rounded
-                color="primary"
+                color="teal"
                 icon="add"
                 label="Nuevo Tratamiento"
                 @click="abrirDialogoTratamiento"
                 class="action-btn"
-              />
+                :disable="hayTratamientoActivo"
+              >
+                <q-tooltip v-if="hayTratamientoActivo">
+                  Suspenda el tratamiento activo para agregar uno nuevo.
+                </q-tooltip>
+              </q-btn>
 
               <q-btn
                 unelevated
@@ -378,7 +383,7 @@
             <q-btn
               unelevated
               :label="tratamientoSeleccionado ? 'Guardar Cambios' : 'Prescribir'"
-              color="primary"
+              color="teal"
               @click="guardarTratamiento"
             />
           </q-card-actions>
