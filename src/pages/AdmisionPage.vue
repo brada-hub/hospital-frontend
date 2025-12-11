@@ -63,10 +63,10 @@
         </div>
       </q-step>
 
-      <!-- Paso 2: Signos Vitales -->
+      <!-- Paso 2: Datos Clínicos -->
       <q-step
         :name="2"
-        title="Signos Vitales"
+        title="Datos Clínicos"
         icon="monitor_heart"
         :done="step > 2"
         active-icon="edit"
@@ -77,9 +77,9 @@
           <div class="step-header">
             <q-icon name="monitor_heart" size="32px" color="red-6" />
             <div>
-              <h3 class="step-title">Registro de Signos Vitales Iniciales</h3>
+              <h3 class="step-title">Registro de Datos Clínicos</h3>
               <p class="step-description">
-                Ingrese los valores actuales del paciente al momento de la admisión
+                Ingrese los valores antropométricos y signos vitales del paciente
               </p>
             </div>
           </div>

@@ -348,13 +348,82 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- DIÁLOGO DE CREDENCIALES NUEVO -->
+    <q-dialog v-model="credencialesDialog" persistent>
+      <q-card class="dialog-card">
+        <q-card-section class="dialog-header bg-positive text-white">
+          <div class="dialog-title">
+            <q-icon name="check_circle" size="32px" class="q-mr-sm" />
+            Usuario Creado Exitosamente
+          </div>
+        </q-card-section>
+
+        <q-card-section class="dialog-content">
+          <div class="text-subtitle1 q-mb-md">
+            El usuario <strong>{{ usuarioCreadoNombre }}</strong> ha sido registrado.
+          </div>
+
+          <q-banner class="bg-grey-2 q-mb-md rounded-borders">
+            <template v-slot:avatar>
+              <q-icon name="vpn_key" color="primary" />
+            </template>
+            <div class="text-weight-bold q-mb-xs">Credenciales de Acceso:</div>
+            <div class="row items-center q-mb-xs">
+              <div class="col-3 text-grey-8">Usuario/Email:</div>
+              <div class="col text-weight-bold">{{ credencialesGeneradas.email }}</div>
+              <div class="col-auto">
+                 <q-btn flat round dense icon="content_copy" size="sm" color="primary" @click="copiarAlPortapapeles(credencialesGeneradas.email)" />
+              </div>
+            </div>
+            <div class="row items-center">
+              <div class="col-3 text-grey-8">Contraseña:</div>
+              <div class="col text-weight-bold">{{ credencialesGeneradas.password }}</div>
+               <div class="col-auto">
+                 <q-btn flat round dense icon="content_copy" size="sm" color="primary" @click="copiarAlPortapapeles(credencialesGeneradas.password)" />
+              </div>
+            </div>
+          </q-banner>
+
+          <div v-if="credencialesGeneradas.telefono" class="q-mt-lg">
+             <div class="text-weight-medium q-mb-sm text-green-8">
+               <q-icon name="whatsapp" size="24px" /> Enviar credenciales por WhatsApp:
+             </div>
+             <q-btn
+                :loading="enviandoWhatsApp"
+                color="green-6"
+                icon="send"
+                label="Enviar a WhatsApp"
+                class="full-width"
+                @click="enviarPorWhatsApp"
+             />
+             <div class="text-caption text-grey q-mt-xs text-center">
+               Se enviará al número: {{ credencialesGeneradas.telefono }}
+             </div>
+          </div>
+          <div v-else class="q-mt-md text-orange-8">
+             <q-icon name="warning" /> No se registró número de celular, no se puede enviar por WhatsApp.
+          </div>
+
+        </q-card-section>
+
+        <q-card-actions align="center" class="dialog-actions">
+          <q-btn
+            label="Cerrar y Finalizar"
+            color="primary"
+            @click="cerrarCredenciales"
+            class="btn-guardar"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue' // Added watch
 import { api } from 'boot/axios'
-import { useQuasar } from 'quasar'
+import { useQuasar, copyToClipboard } from 'quasar' // Added copyToClipboard
 import { useUserStore } from 'stores/user'
 
 const props = defineProps({
@@ -372,6 +441,12 @@ const loadingTable = ref(false)
 const userDialog = ref(false)
 const userAddDialog = ref(false)
 const permissionsDialog = ref(false)
+
+// Credenciales Dialog State
+const credencialesDialog = ref(false)
+const credencialesGeneradas = ref({ email: '', password: '' })
+const enviandoWhatsApp = ref(false)
+const usuarioCreadoNombre = ref('')
 
 const userEditFormRef = ref(null)
 const userAddFormRef = ref(null)
@@ -405,6 +480,24 @@ const userColumns = [
   { name: 'editar', label: 'Editar', field: 'editar', align: 'center' },
   { name: 'estado', label: 'Estado', field: 'estado', align: 'center' },
 ]
+
+// --- Auto-Generation Logic ---
+watch(
+  () => [userAddForm.value.nombre, userAddForm.value.apellidos],
+  ([newNombre, newApellidos]) => {
+    if (!userAddDialog.value) return // Solo si el diálogo está abierto
+
+    const nombreClean = (newNombre || '').split(' ')[0].toLowerCase().trim()
+    const apellidosClean = (newApellidos || '').split(' ')[0].toLowerCase().trim()
+
+    if (nombreClean && apellidosClean) {
+      const base = `${nombreClean}.${apellidosClean}`
+      // Solo actualizamos si el usuario no ha modificado manualmente (opcional, aquí forzamos)
+      userAddForm.value.email = `${base}@hospital.com`
+      userAddForm.value.password = base
+    }
+  }
+)
 
 const fetchUsers = async () => {
   loadingTable.value = true
@@ -447,9 +540,27 @@ const saveNewUser = async () => {
   if (!valid) return
   savingNewUser.value = true
   try {
+    // Guardamos las credenciales antes de enviar (porque el password se hashea en backend)
+    const plainPassword = userAddForm.value.password
+    const plainEmail = userAddForm.value.email
+    const fullName = `${userAddForm.value.nombre} ${userAddForm.value.apellidos}`
+
     await api.post('/users', userAddForm.value)
+
+    // Preparar dialog de credenciales
+    credencialesGeneradas.value = {
+      email: plainEmail,
+      password: plainPassword,
+      telefono: userAddForm.value.telefono // Para WhatsApp
+    }
+    usuarioCreadoNombre.value = fullName
+
     $q.notify({ type: 'positive', message: 'Usuario creado con éxito' })
     userAddDialog.value = false
+
+    // Abrir dialogo de credenciales
+    credencialesDialog.value = true
+
     await fetchUsers()
   } catch (error) {
     console.error('saveNewUser', error)
@@ -495,6 +606,65 @@ const saveUserChanges = async () => {
   } finally {
     savingUser.value = false
   }
+}
+
+// --- Logic for Credentials Dialog ---
+
+const copiarAlPortapapeles = (texto) => {
+  copyToClipboard(texto)
+    .then(() => {
+      $q.notify({
+        type: 'positive',
+        message: 'Copiado al portapapeles',
+        icon: 'content_copy',
+        position: 'top',
+        timeout: 1000,
+      })
+    })
+    .catch(() => {
+      $q.notify({ type: 'negative', message: 'Error al copiar' })
+    })
+}
+
+const cerrarCredenciales = () => {
+  credencialesDialog.value = false
+  credencialesGeneradas.value = { email: '', password: '' }
+}
+
+const enviarPorWhatsApp = () => {
+  enviandoWhatsApp.value = true
+
+  const telefono = credencialesGeneradas.value.telefono
+  if (!telefono || telefono.length < 8) {
+     $q.notify({ type: 'warning', message: 'El usuario no tiene un celular válido registrado.' })
+     enviandoWhatsApp.value = false
+     return
+  }
+
+  const numero = `591${telefono}` // Asumiendo Bolivia
+  const nombre = usuarioCreadoNombre.value
+
+  const mensaje =
+    `Hola *${nombre}*,\n\n` +
+    `Bienvenido al sistema del Hospital.\n\n` +
+    `📋 *Tus Credenciales de Acceso:*\n` +
+    `👤 Usuario: ${credencialesGeneradas.value.email}\n` +
+    `🔒 Contraseña: ${credencialesGeneradas.value.password}\n\n` +
+    `⚠️ Por favor, cambia tu contraseña al ingresar.\n\n` +
+    `Saludos, Administración.`
+
+  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`
+
+  window.open(url, '_blank')
+
+  setTimeout(() => {
+    enviandoWhatsApp.value = false
+    $q.notify({
+      type: 'positive',
+      message: 'WhatsApp abierto.',
+      icon: 'whatsapp',
+    })
+  }, 1000)
 }
 
 const openPermissionsDialog = async (user) => {

@@ -339,123 +339,7 @@
       </q-card>
     </q-dialog>
 
-    <!-- DIÁLOGO DE CREDENCIALES -->
-    <q-dialog v-model="credencialesDialog" persistent>
-      <q-card class="credenciales-card">
-        <q-card-section class="dialog-header credenciales-header">
-          <div class="dialog-title">
-            <q-icon name="check_circle" size="48px" class="q-mr-sm" />
-            Paciente Registrado Exitosamente
-          </div>
-        </q-card-section>
-
-        <q-card-section class="credenciales-content">
-          <div class="success-icon-container">
-            <q-icon name="verified_user" size="80px" color="positive" />
-          </div>
-
-          <div class="paciente-info">
-            <div class="info-item">
-              <q-icon name="person" size="24px" color="teal" />
-              <span>{{ pacienteRegistrado.nombre }} {{ pacienteRegistrado.apellidos }}</span>
-            </div>
-            <div class="info-item">
-              <q-icon name="fingerprint" size="24px" color="teal" />
-              <span>CI: {{ pacienteRegistrado.ci }}</span>
-            </div>
-          </div>
-
-          <q-separator class="q-my-md" />
-
-          <div class="credenciales-section">
-            <div class="section-subtitle">Credenciales de Acceso</div>
-            <div class="credenciales-info">
-              <div class="credencial-item">
-                <div class="credencial-label">
-                  <q-icon name="email" />
-                  Usuario
-                </div>
-                <div class="credencial-value">{{ credencialesGeneradas.email }}</div>
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="content_copy"
-                  size="sm"
-                  @click="copiarAlPortapapeles(credencialesGeneradas.email)"
-                  class="copy-btn"
-                >
-                  <q-tooltip>Copiar usuario</q-tooltip>
-                </q-btn>
-              </div>
-              <div class="credencial-item">
-                <div class="credencial-label">
-                  <q-icon name="lock" />
-                  Contraseña
-                </div>
-                <div class="credencial-value">{{ credencialesGeneradas.password }}</div>
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="content_copy"
-                  size="sm"
-                  @click="copiarAlPortapapeles(credencialesGeneradas.password)"
-                  class="copy-btn"
-                >
-                  <q-tooltip>Copiar contraseña</q-tooltip>
-                </q-btn>
-              </div>
-            </div>
-          </div>
-
-          <q-banner class="warning-banner" rounded>
-            <template v-slot:avatar>
-              <q-icon name="info" color="orange" />
-            </template>
-            <strong>Importante:</strong> Guarda estas credenciales. Se recomienda que el paciente
-            cambie su contraseña al iniciar sesión.
-          </q-banner>
-
-          <!-- Botón WhatsApp -->
-          <div v-if="pacienteRegistrado.celular_referencia" class="whatsapp-section">
-            <q-separator class="q-my-md" />
-            <div class="whatsapp-info">
-              <q-icon name="phone" size="24px" color="green-7" />
-              <span>¿Enviar credenciales por WhatsApp?</span>
-            </div>
-            <q-btn
-              :loading="enviandoWhatsApp"
-              label="Enviar por WhatsApp"
-              icon="whatsapp"
-              color="positive"
-              class="whatsapp-btn"
-              @click="enviarPorWhatsApp"
-              no-caps
-              unelevated
-            />
-            <div class="whatsapp-recipient">
-              A: {{ pacienteRegistrado.nombre_referencia }}
-              {{ pacienteRegistrado.apellidos_referencia }} ({{
-                formatearCelular(pacienteRegistrado.celular_referencia)
-              }})
-            </div>
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="center" class="q-pb-lg">
-          <q-btn
-            label="Entendido"
-            color="primary"
-            @click="cerrarCredenciales"
-            class="btn-entendido"
-            icon-right="check"
-            no-caps
-            unelevated
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <!-- DIÁLOGO DE CREDENCIALES ELIMINADO -->
   </div>
 </template>
 
@@ -472,17 +356,12 @@ const pacientes = ref([])
 const filter = ref('')
 const loadingTable = ref(false)
 const pacienteDialog = ref(false)
-const credencialesDialog = ref(false)
 const isSaving = ref(false)
-const enviandoWhatsApp = ref(false)
 const pacienteFormRef = ref(null)
 
-const credencialesGeneradas = ref({
-  email: '',
-  password: '',
-})
 
-const pacienteRegistrado = ref({})
+
+
 
 // Estados de validación en tiempo real
 const errorCI = ref('')
@@ -655,17 +534,18 @@ const savePaciente = async () => {
       })
       pacienteDialog.value = false
     } else {
-      // Nuevo paciente: recibir credenciales
+      // Nuevo paciente
       payload.estado = true
       delete payload.id
-      const response = await api.post('/pacientes', payload)
+      await api.post('/pacientes', payload)
 
-      // Guardar datos del paciente y credenciales
-      pacienteRegistrado.value = { ...payload, ...response.data.paciente }
-      credencialesGeneradas.value = response.data.credenciales
+      $q.notify({
+        type: 'positive',
+        message: 'Paciente registrado con éxito.',
+        icon: 'check_circle',
+      })
 
       pacienteDialog.value = false
-      credencialesDialog.value = true
     }
 
     await fetchPacientes()
@@ -690,65 +570,7 @@ const savePaciente = async () => {
   }
 }
 
-const copiarAlPortapapeles = (texto) => {
-  navigator.clipboard.writeText(texto).then(() => {
-    $q.notify({
-      type: 'positive',
-      message: 'Copiado al portapapeles',
-      icon: 'content_copy',
-      position: 'top',
-      timeout: 1000,
-    })
-  })
-}
 
-const formatearCelular = (celular) => {
-  if (!celular) return ''
-  return `+591 ${celular}`
-}
-
-const enviarPorWhatsApp = () => {
-  enviandoWhatsApp.value = true
-
-  // Usar el número fijo del hospital
-
-  const numero = `591${pacienteRegistrado.value.celular_referencia}`
-  const nombre = `${pacienteRegistrado.value.nombre} ${pacienteRegistrado.value.apellidos}`
-  const nombreReferencia =
-    `${pacienteRegistrado.value.nombre_referencia || ''} ${pacienteRegistrado.value.apellidos_referencia || ''}`.trim()
-
-  const mensaje =
-    `Hola ${nombreReferencia || 'Familiar'},\n\n` +
-    `Se ha registrado al paciente *${nombre}* en nuestro sistema hospitalario.\n\n` +
-    `📋 *Credenciales de acceso:*\n` +
-    `👤 Usuario: ${credencialesGeneradas.value.email}\n` +
-    `🔒 Contraseña: ${credencialesGeneradas.value.password}\n\n` +
-    `⚠️ *Importante:* Por seguridad, se recomienda cambiar la contraseña al iniciar sesión por primera vez.\n\n` +
-    `📱 Para cualquier consulta, comunícate con nosotros al: +591 67544099\n\n` +
-    `Gracias por confiar en nosotros. 🏥`
-
-  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`
-
-  // Abrir WhatsApp en una nueva pestaña
-  window.open(url, '_blank')
-
-  setTimeout(() => {
-    enviandoWhatsApp.value = false
-    $q.notify({
-      type: 'positive',
-      message: 'WhatsApp abierto. Solo debes presionar Enviar.',
-      icon: 'whatsapp',
-      position: 'top',
-      timeout: 2000,
-    })
-  }, 1000)
-}
-
-const cerrarCredenciales = () => {
-  credencialesDialog.value = false
-  credencialesGeneradas.value = { email: '', password: '' }
-  pacienteRegistrado.value = {}
-}
 
 onMounted(fetchPacientes)
 </script>

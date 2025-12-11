@@ -2,13 +2,13 @@
   <q-dialog
     :model-value="modelValue"
     @update:model-value="(val) => emit('update:modelValue', val)"
-    persistent
+    :persistent="persistent"
   >
     <q-card class="styled-modal-card">
       <q-card-section class="modal-header text-white">
         <div class="text-h6">Configuración de la Cuenta</div>
         <div class="text-subtitle2">Gestiona tu perfil y seguridad</div>
-        <q-btn icon="close" flat round dense v-close-popup class="close-btn" />
+        <q-btn v-if="!persistent" icon="close" flat round dense v-close-popup class="close-btn" />
       </q-card-section>
 
       <q-tabs
@@ -20,7 +20,7 @@
         align="justify"
         no-caps
       >
-        <q-tab name="profile" icon="person" label="Mis Datos" />
+        <q-tab name="profile" icon="person" label="Mis Datos" :disable="persistent" />
         <q-tab name="password" icon="lock" label="Cambiar Contraseña" />
       </q-tabs>
 
@@ -115,6 +115,7 @@ const props = defineProps({
     type: String,
     default: 'profile',
   },
+  persistent: Boolean, // ✅ Nueva prop
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -186,6 +187,14 @@ const changePassword = async () => {
   passwordLoading.value = true
   try {
     await api.put('/user/password', passwordForm.value)
+
+    // ✅ Actualizar estado local para desbloquear la UI
+    if (userStore.user) {
+      userStore.user.must_change_password = false
+      // También actualizar en localStorage
+      localStorage.setItem('user', JSON.stringify(userStore.user))
+    }
+
     $q.notify({ type: 'positive', message: '¡Contraseña cambiada con éxito!' })
     emit('update:modelValue', false) // Cierra el modal
   } catch (error) {

@@ -248,12 +248,16 @@
       <router-view />
     </q-page-container>
 
-    <UserProfileModal v-model="showProfileModal" :initial-tab="activeTab" />
+    <UserProfileModal
+      v-model="showProfileModal"
+      :initial-tab="activeTab"
+      :persistent="isForceChangePassword"
+    />
   </q-layout>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue' // Added watch
 import { useUserStore } from 'stores/user'
 import { useQuasar } from 'quasar'
 import { useRouter, useRoute } from 'vue-router'
@@ -275,6 +279,8 @@ const userRole = computed(() => userStore.user?.rol?.nombre || 'Sin Rol Asignado
 
 const showProfileModal = ref(false)
 const activeTab = ref('profile')
+// Variable para controlar si el modal es persistente (no se puede cerrar)
+const isForceChangePassword = ref(false)
 
 const openProfileModal = (initialTab = 'profile') => {
   activeTab.value = initialTab
@@ -291,6 +297,21 @@ const cerrarSesion = async () => {
     icon: 'logout',
   })
 }
+
+// 🔐 Watcher para forzar cambio de contraseña
+watch(
+  () => userStore.user,
+  (newUser) => {
+    if (newUser && newUser.must_change_password) {
+      isForceChangePassword.value = true
+      activeTab.value = 'password'
+      showProfileModal.value = true
+    } else {
+      isForceChangePassword.value = false
+    }
+  },
+  { immediate: true }
+)
 
 const drawer = ref(true)
 </script>

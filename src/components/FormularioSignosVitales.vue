@@ -14,99 +14,167 @@
       </div>
 
       <!-- Grid responsivo para signos vitales -->
-      <div v-else class="signos-grid">
-        <div v-for="signo in signos" :key="signo.id" class="form-section">
-          <div class="signo-container">
-            <div class="signo-label">
-              <q-icon name="monitor_heart" size="18px" color="teal" class="q-mr-sm" />
-              <span class="text-weight-600 text-teal-9">{{ signo.nombre }}</span>
-              <span class="text-grey-7 q-ml-xs">({{ signo.unidad }})</span>
-            </div>
-
-            <!-- DUAL INPUTS para signos que requieren valores duales -->
-            <div v-if="signo.requiere_valores_duales" class="dual-inputs-container">
-              <q-input
-                outlined
-                v-model.number="signo.medida"
-                type="number"
-                step="0.1"
-                dense
-                label="Valor Alto *"
-                :rules="validationRules"
-                reactive-rules
-                lazy-rules="ondemand"
-                class="input-field dual-input"
-                @update:model-value="onInputChange(signo, 'medida')"
-                :error="getError(signo.id, 'medida') !== ''"
-                :error-message="getError(signo.id, 'medida')"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="arrow_upward" color="red" />
-                </template>
-              </q-input>
-
-              <q-input
-                outlined
-                v-model.number="signo.medida_baja"
-                type="number"
-                step="0.1"
-                dense
-                label="Valor Bajo *"
-                :rules="validationRules"
-                reactive-rules
-                lazy-rules="ondemand"
-                class="input-field dual-input"
-                @update:model-value="onInputChange(signo, 'medida_baja')"
-                :error="getError(signo.id, 'medida_baja') !== ''"
-                :error-message="getError(signo.id, 'medida_baja')"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="arrow_downward" color="blue" />
-                </template>
-              </q-input>
-            </div>
-
-            <!-- SINGLE INPUT para signos normales -->
-            <q-input
-              v-else
-              outlined
-              v-model.number="signo.medida"
-              type="number"
-              step="0.1"
-              dense
-              :label="`Ingrese ${signo.nombre.toLowerCase()} *`"
-              :rules="validationRules"
-              reactive-rules
-              lazy-rules="ondemand"
-              class="input-field q-mt-md"
-              @update:model-value="onInputChange(signo, 'medida')"
-              :error="getError(signo.id, 'medida') !== ''"
-              :error-message="getError(signo.id, 'medida')"
-            >
-              <template v-slot:prepend>
-                <q-icon name="edit" color="teal" />
-              </template>
-              <template v-slot:hint>
-                <div class="flex items-center q-mt-xs">
-                  <q-icon name="info" size="12px" class="q-mr-xs" />
-                  <span class="text-teal-8">Rango: {{ getRangoRecomendado(signo) }}</span>
+      <div v-else class="content-wrapper">
+        <!-- SECCIÓN ANTROPOMETRÍA -->
+        <div v-if="signosAntropometria.length > 0" class="section-container">
+          <div class="section-title text-teal-9 q-mb-md flex items-center">
+            <q-icon name="accessibility_new" size="24px" class="q-mr-sm" />
+            <span class="text-h6">Antropometría</span>
+          </div>
+          <div class="signos-grid">
+            <div v-for="signo in signosAntropometria" :key="signo.id" class="form-section">
+              <div class="signo-container">
+                <div class="signo-label">
+                  <q-icon name="height" size="18px" color="teal" class="q-mr-sm" />
+                  <span class="text-weight-600 text-teal-9">{{ signo.nombre }}</span>
+                  <span class="text-grey-7 q-ml-xs">({{ signo.unidad }})</span>
                 </div>
-              </template>
-            </q-input>
+                <!-- SINGLE INPUT (Antropometría usually single) -->
+                <q-input
+                  outlined
+                  v-model.number="signo.medida"
+                  type="number"
+                  step="0.1"
+                  dense
+                  :label="`Ingrese ${signo.nombre.toLowerCase()} *`"
+                  :rules="validationRules"
+                  reactive-rules
+                  lazy-rules="ondemand"
+                  class="input-field q-mt-md"
+                  @update:model-value="onInputChange(signo, 'medida')"
+                  :error="getError(signo.id, 'medida') !== ''"
+                  :error-message="getError(signo.id, 'medida')"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="edit" color="teal" />
+                  </template>
+                  <template v-slot:hint>
+                    <div class="flex items-center q-mt-xs">
+                      <q-icon name="info" size="12px" class="q-mr-xs" />
+                      <span class="text-teal-8">Rango: {{ getRangoRecomendado(signo) }}</span>
+                    </div>
+                  </template>
+                </q-input>
 
-            <!-- INDICADOR DE VALIDACIÓN -->
-            <div v-if="hasAnyValue(signo)" class="validacion-indicator q-mt-sm">
-              <q-icon
-                :name="esSignoValido(signo) ? 'check_circle' : 'warning'"
-                :color="esSignoValido(signo) ? 'positive' : 'warning'"
-                size="16px"
-              />
-              <span
-                :class="esSignoValido(signo) ? 'text-positive' : 'text-warning'"
-                class="q-ml-xs text-caption"
-              >
-                {{ esSignoValido(signo) ? 'Validado' : getMensajeValidacion(signo) }}
-              </span>
+                <div v-if="hasAnyValue(signo)" class="validacion-indicator q-mt-sm">
+                  <q-icon
+                    :name="esSignoValido(signo) ? 'check_circle' : 'warning'"
+                    :color="esSignoValido(signo) ? 'positive' : 'warning'"
+                    size="16px"
+                  />
+                  <span
+                    :class="esSignoValido(signo) ? 'text-positive' : 'text-warning'"
+                    class="q-ml-xs text-caption"
+                  >
+                    {{ esSignoValido(signo) ? 'Validado' : getMensajeValidacion(signo) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN SIGNOS VITALES -->
+        <div v-if="signosVitales.length > 0" class="section-container q-mt-lg">
+          <div class="section-title text-teal-9 q-mb-md flex items-center">
+            <q-icon name="monitor_heart" size="24px" class="q-mr-sm" />
+            <span class="text-h6">Signos Vitales</span>
+          </div>
+          <div class="signos-grid">
+            <div v-for="signo in signosVitales" :key="signo.id" class="form-section">
+              <div class="signo-container">
+                <div class="signo-label">
+                  <q-icon name="monitor_heart" size="18px" color="teal" class="q-mr-sm" />
+                  <span class="text-weight-600 text-teal-9">{{ signo.nombre }}</span>
+                  <span class="text-grey-7 q-ml-xs">({{ signo.unidad }})</span>
+                </div>
+
+                <!-- DUAL INPUTS para signos que requieren valores duales -->
+                <div v-if="signo.requiere_valores_duales" class="dual-inputs-container">
+                  <q-input
+                    outlined
+                    v-model.number="signo.medida"
+                    type="number"
+                    step="0.1"
+                    dense
+                    label="Valor Alto *"
+                    :rules="validationRules"
+                    reactive-rules
+                    lazy-rules="ondemand"
+                    class="input-field dual-input"
+                    @update:model-value="onInputChange(signo, 'medida')"
+                    :error="getError(signo.id, 'medida') !== ''"
+                    :error-message="getError(signo.id, 'medida')"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="arrow_upward" color="red" />
+                    </template>
+                  </q-input>
+
+                  <q-input
+                    outlined
+                    v-model.number="signo.medida_baja"
+                    type="number"
+                    step="0.1"
+                    dense
+                    label="Valor Bajo *"
+                    :rules="validationRules"
+                    reactive-rules
+                    lazy-rules="ondemand"
+                    class="input-field dual-input"
+                    @update:model-value="onInputChange(signo, 'medida_baja')"
+                    :error="getError(signo.id, 'medida_baja') !== ''"
+                    :error-message="getError(signo.id, 'medida_baja')"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="arrow_downward" color="blue" />
+                    </template>
+                  </q-input>
+                </div>
+
+                <!-- SINGLE INPUT para signos normales -->
+                <q-input
+                  v-else
+                  outlined
+                  v-model.number="signo.medida"
+                  type="number"
+                  step="0.1"
+                  dense
+                  :label="`Ingrese ${signo.nombre.toLowerCase()} *`"
+                  :rules="validationRules"
+                  reactive-rules
+                  lazy-rules="ondemand"
+                  class="input-field q-mt-md"
+                  @update:model-value="onInputChange(signo, 'medida')"
+                  :error="getError(signo.id, 'medida') !== ''"
+                  :error-message="getError(signo.id, 'medida')"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="edit" color="teal" />
+                  </template>
+                  <template v-slot:hint>
+                    <div class="flex items-center q-mt-xs">
+                      <q-icon name="info" size="12px" class="q-mr-xs" />
+                      <span class="text-teal-8">Rango: {{ getRangoRecomendado(signo) }}</span>
+                    </div>
+                  </template>
+                </q-input>
+
+                <!-- INDICADOR DE VALIDACIÓN -->
+                <div v-if="hasAnyValue(signo)" class="validacion-indicator q-mt-sm">
+                  <q-icon
+                    :name="esSignoValido(signo) ? 'check_circle' : 'warning'"
+                    :color="esSignoValido(signo) ? 'positive' : 'warning'"
+                    size="16px"
+                  />
+                  <span
+                    :class="esSignoValido(signo) ? 'text-positive' : 'text-warning'"
+                    class="q-ml-xs text-caption"
+                  >
+                    {{ esSignoValido(signo) ? 'Validado' : getMensajeValidacion(signo) }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -116,7 +184,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { api } from 'boot/axios'
 import { Notify } from 'quasar'
 
@@ -140,6 +208,16 @@ const formRef = ref(null)
 const signos = ref([])
 const loading = ref(true)
 const errorMessages = ref({})
+
+const signosAntropometria = computed(() => {
+  const keys = ['Peso', 'Talla', 'Altura', 'IMC']
+  return signos.value.filter((s) => keys.some((k) => s.nombre.includes(k)))
+})
+
+const signosVitales = computed(() => {
+  const keys = ['Peso', 'Talla', 'Altura', 'IMC']
+  return signos.value.filter((s) => !keys.some((k) => s.nombre.includes(k)))
+})
 
 const validationRules = [
   (val) => (val !== null && val !== '' && val !== undefined) || 'Este campo es requerido',
