@@ -15,43 +15,9 @@
 
     <!-- Main Content -->
     <div v-else-if="dashboardData" class="content-wrapper">
-      <!-- Card de Información del Paciente -->
-      <q-card flat bordered class="patient-info-card">
-        <q-card-section class="patient-header">
-          <div class="patient-details">
-            <div class="patient-name">
-              {{ dashboardData.paciente.nombre }} {{ dashboardData.paciente.apellidos }}
-            </div>
-            <div class="patient-meta">
-              <span class="meta-item">
-                <q-icon name="fingerprint" size="18px" />
-                C.I: {{ dashboardData.paciente.ci }}
-              </span>
-              <span class="meta-item">
-                <q-icon name="cake" size="18px" />
-                {{ calcularEdad(dashboardData.paciente.fecha_nacimiento) }} años
-              </span>
-            </div>
-
-            <q-badge
-              v-if="!dashboardData.fecha_alta"
-              color="positive"
-              text-color="white"
-              label="Internado"
-              icon="local_hospital"
-              class="status-badge"
-            />
-            <q-badge
-              v-else
-              color="grey"
-              text-color="white"
-              :label="`De Alta - ${formatDateTime(dashboardData.fecha_alta)}`"
-              icon="check_circle"
-              class="status-badge"
-            />
-          </div>
-
-          <div class="action-buttons">
+      <!-- Botones de Acción -->
+      <div class="actions-container q-mb-md">
+           <div class="action-buttons justify-end">
             <template v-if="!dashboardData.fecha_alta">
               <q-btn
                 v-if="!dashboardData.fecha_alta"
@@ -69,20 +35,7 @@
                 </q-tooltip>
               </q-btn>
 
-              <q-btn
-                unelevated
-                rounded
-                color="teal"
-                icon="restaurant_menu"
-                label="Prescribir Dieta"
-                @click="abrirDialogoAlimentacion"
-                :disable="hayAlimentacionActiva"
-                class="action-btn"
-              >
-                <q-tooltip v-if="hayAlimentacionActiva">
-                  Suspenda la dieta activa para agregar una nueva.
-                </q-tooltip>
-              </q-btn>
+              <!-- Botón Prescribir Dieta Eliminado para Médicos -->
 
               <q-btn
                 unelevated
@@ -116,8 +69,7 @@
               />
             </template>
           </div>
-        </q-card-section>
-      </q-card>
+      </div>
 
       <!-- TABS NAVIGATION -->
       <div class="tabs-container">
@@ -125,8 +77,8 @@
           v-model="activeTab"
           dense
           class="text-grey"
-          active-color="primary"
-          indicator-color="primary"
+          active-color="teal"
+          indicator-color="teal"
           align="justify"
           narrow-indicator
         >
@@ -159,15 +111,15 @@
           <q-tab-panel name="tratamientos" class="q-pa-none">
              <div class="panel-inner-content">
                 <div
-                  v-if="!dashboardData.tratamientos || !dashboardData.tratamientos.length"
+                  v-if="!tratamientosActivos || !tratamientosActivos.length"
                   class="empty-state"
                 >
                   <q-icon name="medication" size="80px" color="grey-5" />
-                  <p>No hay tratamientos prescritos.</p>
+                  <p>No hay tratamientos activos prescritos.</p>
                 </div>
 
                 <q-card
-                  v-for="tratamiento in dashboardData.tratamientos"
+                  v-for="tratamiento in tratamientosActivos"
                   :key="tratamiento.id"
                   flat
                   bordered
@@ -263,81 +215,152 @@
                     </q-list>
                   </q-card-section>
                 </q-card>
+
+                <!-- Historial de Tratamientos (Nuevo Componente) -->
+                <ListaHistorialTratamientos :tratamientos="tratamientosInactivos" />
              </div>
           </q-tab-panel>
 
           <!-- PANEL: ALIMENTACIÓN -->
           <q-tab-panel name="alimentacion" class="q-pa-none">
              <div class="panel-inner-content">
-                <div
-                  v-if="!dashboardData.alimentaciones || !dashboardData.alimentaciones.length"
-                  class="empty-state"
-                >
-                  <q-icon name="restaurant_off" size="80px" color="grey-5" />
-                  <p>No hay planes de alimentación prescritos.</p>
+
+                <!-- VISTA LECTURA / GESTIÓN (Médico / Nutricionista) -->
+                <template v-if="isMedico || isNutricionista">
+                  <div class="role-view-container">
+                    <!-- Barra de Acciones para Nutricionista -->
+                    <div v-if="isNutricionista && hayAlimentacionActiva" class="actions-bar q-mb-md">
+                       <div class="text-subtitle2 text-grey-7">Acciones de Nutrición</div>
+                       <div class="row q-gutter-sm">
+                          <q-btn
+                            color="amber-9"
+                            icon="edit"
+                            label="Modificar Plan"
+                            unelevated
+                            class="action-btn"
+                            @click="abrirDialogoEditarAlimentacion(dashboardData.alimentaciones.find(a => a.estado === 0))"
+                          />
+                          <q-btn
+                            color="negative"
+                            icon="block"
+                            label="Suspender Dieta"
+                            outline
+                            class="action-btn"
+                            @click="confirmarSuspensionDieta"
+                          />
+                       </div>
+                    </div>
+
+                    <!-- Botón para asignar dieta si no tiene (Solo Nutricionista) -->
+                    <div v-if="isNutricionista && !hayAlimentacionActiva" class="q-mb-md">
+                       <q-btn
+                          color="teal"
+                          icon="add_circle"
+                          label="Asignar Nuevo Plan Alimenticio"
+                          unelevated
+                          class="full-width"
+                          size="lg"
+                          @click="abrirDialogoAlimentacion"
+                        />
+                    </div>
+
+                    <AlimentacionPanelReadOnly
+                      :internacion-id="internacionId"
+                    />
+                  </div>
+                </template>
+
+                <!-- VISTA ENFERMERÍA / OTROS (Registro de consumos) -->
+                <template v-else>
+                     <div
+                      v-if="!hayAlimentacionActiva"
+                      class="empty-state"
+                    >
+                      <q-icon name="restaurant_off" size="80px" color="grey-5" />
+                      <p>No hay planes de alimentación prescritos.</p>
+                      <p class="text-caption text-grey-6">Solo un nutricionista puede asignar un plan.</p>
+                    </div>
+
+                    <AlimentacionPanel
+                      v-else
+                      ref="panelAlimentacionRef"
+                      :internacion-id="internacionId"
+                      :tratamiento-id="dashboardData.tratamientos?.[0]?.id || null"
+                      :read-only="false"
+                      @edit-request="abrirDialogoEditarAlimentacion"
+                    />
+                </template>
+
+                <!-- Historial de dietas suspendidas (visible para todos al final) -->
+                <div v-if="alimentacionesSuspendidas.length > 0" class="q-mt-xl">
+                    <div class="text-subtitle1 q-mb-md text-grey-8">Historial de Dietas Anteriores</div>
+                    <q-card
+                      v-for="alimentacion in alimentacionesSuspendidas"
+                      :key="alimentacion.id"
+                      flat
+                      bordered
+                      class="alimentacion-card q-mb-md"
+                    >
+                      <q-card-section class="alimentacion-header bg-grey-2">
+                        <div class="alimentacion-title text-grey-8">
+                          {{ alimentacion.tipo_dieta?.nombre || 'Dieta sin nombre' }}
+                        </div>
+                        <q-badge
+                          :color="getAlimentacionColorPorEstado(alimentacion.estado)"
+                          :label="getAlimentacionTextoEstado(alimentacion.estado)"
+                          class="status-badge-small"
+                        />
+                      </q-card-section>
+                      <q-card-section>
+                        <p><strong>Vía:</strong> {{ alimentacion.via_administracion }}</p>
+                        <p class="text-caption">Finalizada el: {{ formatDateTime(alimentacion.updated_at) }}</p>
+                      </q-card-section>
+                    </q-card>
                 </div>
 
-                <AlimentacionPanel
-                  ref="panelAlimentacionRef"
-                  v-if="hayAlimentacionActiva"
-                  :internacion-id="internacionId"
-                  :tratamiento-id="dashboardData.tratamientos?.[0]?.id || null"
-                  @edit-request="abrirDialogoEditarAlimentacion"
-                />
-
-                <q-card
-                  v-for="alimentacion in alimentacionesSuspendidas"
-                  :key="alimentacion.id"
-                  flat
-                  bordered
-                  class="alimentacion-card"
-                >
-                  <q-card-section class="alimentacion-header">
-                    <div class="alimentacion-title">
-                      {{ alimentacion.tipo_dieta?.nombre || 'Dieta sin nombre' }}
-                    </div>
-                    <q-badge
-                      :color="getAlimentacionColorPorEstado(alimentacion.estado)"
-                      :label="getAlimentacionTextoEstado(alimentacion.estado)"
-                      class="status-badge-small"
-                    />
-                  </q-card-section>
-                  <q-card-section>
-                    <p><strong>Vía:</strong> {{ alimentacion.via_administracion }}</p>
-                    <p><strong>Observaciones:</strong> {{ alimentacion.descripcion }}</p>
-                    <q-list
-                      bordered
-                      separator
-                      dense
-                      v-if="alimentacion.tiempos && alimentacion.tiempos.length > 0"
-                      class="tiempos-list"
-                    >
-                      <q-item-label header dense>Tiempos de Comida</q-item-label>
-                      <q-item v-for="tiempo in alimentacion.tiempos" :key="tiempo.id" dense>
-                        <q-item-section>
-                          <q-item-label class="tiempo-name">{{ tiempo.tiempo_comida }}</q-item-label>
-                          <q-item-label caption>{{ tiempo.descripcion || 'Sin detalle' }}</q-item-label>
-                        </q-item-section>
-                      </q-item>
-                    </q-list>
-                  </q-card-section>
-                </q-card>
              </div>
           </q-tab-panel>
 
           <!-- PANEL: PLAN DE CUIDADOS (EVOLUCIÓN) -->
           <q-tab-panel name="plan-cuidados" class="q-pa-none">
              <div class="panel-inner-content">
-               <div class="evolution-actions q-mb-md" v-if="!dashboardData.fecha_alta">
+
+               <!-- SECCIÓN 1: PLAN DE CUIDADOS (INSTRUCCIONES) -->
+               <div class="q-mb-xl">
+                 <div class="row items-center justify-between q-mb-md">
+                    <div class="text-h6 text-teal-9">Indicaciones y Plan de Cuidados</div>
+                    <q-btn
+                      v-if="!dashboardData.fecha_alta"
+                      unelevated
+                      rounded
+                      color="teal"
+                      icon="add_task"
+                      label="Nueva Indicación"
+                      @click="abrirDialogoCuidado"
+                    />
+                 </div>
+
+                 <PlanCuidados
+                    :plan="dashboardData.plan_de_cuidados || []"
+                    @recargar-pacientes="fetchData"
+                 />
+               </div>
+
+               <q-separator class="q-my-lg" />
+
+               <!-- SECCIÓN 2: NOTAS DE EVOLUCIÓN -->
+               <div class="row items-center justify-between q-mb-md">
+                  <div class="text-h6 text-blue-grey-9">Notas de Evolución</div>
                   <q-btn
+                    v-if="!dashboardData.fecha_alta"
                     unelevated
                     rounded
                     color="secondary"
                     icon="note_add"
-                    label="Añadir Nota de Evolución"
+                    label="Nueva Nota"
                     @click="abrirDialogoEvolucion"
                   />
-                </div>
+               </div>
 
                 <div v-if="notasDeEvolucion.length > 0" class="evolution-notes">
                   <q-card
@@ -435,6 +458,55 @@
           </q-form>
         </q-card>
       </q-dialog>
+
+      <!-- Diálogo Nuevo Cuidado -->
+      <q-dialog v-model="mostrarDialogoCuidado" persistent>
+        <q-card class="dialog-card-small">
+           <q-card-section class="dialog-header-custom text-white">
+            <div class="text-h6">Nueva Indicación / Cuidado</div>
+          </q-card-section>
+
+          <q-form @submit.prevent="guardarCuidado">
+            <q-card-section class="q-pt-md q-gutter-md">
+              <q-input
+                outlined
+                v-model="cuidadoForm.tipo"
+                label="Tipo de Indicación"
+                hint="Ej: Cuidado de Herida, Control Glucemia, Reposo"
+                :rules="[val => !!val || 'Requerido']"
+              />
+
+              <q-input
+                outlined
+                v-model="cuidadoForm.frecuencia"
+                label="Frecuencia"
+                hint="Ej: Cada 8 horas, Turno Mañana, SOS"
+                :rules="[val => !!val || 'Requerido']"
+              />
+
+              <q-input
+                outlined
+                v-model="cuidadoForm.descripcion"
+                label="Descripción Detallada"
+                type="textarea"
+                rows="4"
+                :rules="[val => !!val || 'Requerido', val => val.length > 5 || 'Mínimo 5 caracteres']"
+              />
+            </q-card-section>
+
+            <q-card-actions align="right" class="q-pa-md bg-grey-1">
+              <q-btn flat label="Cancelar" color="grey-7" v-close-popup />
+              <q-btn
+                unelevated
+                label="Guardar Indicación"
+                color="teal"
+                type="submit"
+                :loading="guardandoCuidado"
+              />
+            </q-card-actions>
+          </q-form>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -444,10 +516,14 @@ import { defineComponent, ref, onMounted, computed } from 'vue'
 import { Loading, Notify, Dialog } from 'quasar'
 import { format, differenceInYears } from 'date-fns'
 import { api } from 'boot/axios'
+import { useUserStore } from 'src/stores/user'
 import FormularioPrescripcion from 'src/components/FormularioPrescripcion.vue'
 import AlimentacionForm from 'src/components/AlimentacionForm.vue'
 import AlimentacionPanel from 'src/components/AlimentacionPanel.vue'
+import AlimentacionPanelReadOnly from 'src/components/AlimentacionPanelReadOnly.vue'
+import ListaHistorialTratamientos from 'src/components/ListaHistorialTratamientos.vue' // ✅ Added history component
 import SignosVitalesDashboard from 'src/components/SignosVitalesDashboard.vue'
+import PlanCuidados from 'src/components/PlanCuidados.vue'
 
 export default defineComponent({
   name: 'PanelInternacion',
@@ -455,21 +531,30 @@ export default defineComponent({
     FormularioPrescripcion,
     AlimentacionForm,
     AlimentacionPanel,
+    AlimentacionPanelReadOnly,
+    ListaHistorialTratamientos, // ✅ Added
     SignosVitalesDashboard,
+    PlanCuidados,
   },
   props: {
     internacionId: {
       type: [String, Number],
       required: true,
     },
+    initialData: {
+      type: Object,
+      default: null,
+    },
   },
   setup(props) {
     const internacionId = props.internacionId
+    const userStore = useUserStore() // ✅ Added for permission checks
     const activeTab = ref('signos-vitales') // ✅ Added for tabs
     const isLoading = ref(true)
     const error = ref(null)
     const dashboardData = ref(null)
     const catalogoMedicamentos = ref([])
+    const catalogoTiposDieta = ref([])
     const mostrarDialogoTratamiento = ref(false)
     const tratamientoSeleccionado = ref(null)
     const formularioPrescripcionRef = ref(null)
@@ -477,11 +562,19 @@ export default defineComponent({
     const nuevaObservacion = ref('')
     const guardandoEvolucion = ref(false)
     const evolucionFormRef = ref(null)
-    const catalogoTiposDieta = ref([])
     const mostrarDialogoAlimentacion = ref(false)
     const alimentacionSeleccionada = ref(null)
     const formularioAlimentacionRef = ref(null)
     const panelAlimentacionRef = ref(null)
+
+    // Care Plan State
+    const mostrarDialogoCuidado = ref(false)
+    const cuidadoForm = ref({
+        tipo: 'Indicación Médica',
+        descripcion: '',
+        frecuencia: '',
+    })
+    const guardandoCuidado = ref(false)
 
     const controlesConValores = computed(() => {
       // FIX: El backend envía 'controles' (español), no 'controls'
@@ -511,18 +604,53 @@ export default defineComponent({
       return dashboardData.value?.alimentaciones?.filter((a) => a.estado !== 0) || []
     })
 
+    const tratamientosActivos = computed(() => {
+      return dashboardData.value?.tratamientos?.filter((t) => t.estado === 0) || []
+    })
+
+    const tratamientosInactivos = computed(() => {
+      return dashboardData.value?.tratamientos?.filter((t) => t.estado !== 0) || []
+    })
+
+    // ✅ Permission check for diet editing
+    const canEditDiet = computed(() => {
+      return userStore.hasPermission('acceso.nutricion')
+    })
+
+    // ROL COMPUTED PROPERTIES
+    const isMedico = computed(() => userStore.user?.rol?.nombre?.toLowerCase().includes('medico') || userStore.user?.rol?.nombre?.toLowerCase().includes('médico'))
+    const isNutricionista = computed(() => userStore.user?.rol?.nombre?.toLowerCase().includes('nutricio'))
+
     async function fetchData() {
       isLoading.value = true
       error.value = null
       try {
-        const [dashboardResponse, medicamentosResponse, tiposDietaResponse] = await Promise.all([
-          api.get(`/internaciones/${internacionId}/vista-completa`),
+        const promises = [
           api.get('/medicamentos'),
           api.get('/tipos-dieta'),
-        ])
-        dashboardData.value = dashboardResponse.data
-        catalogoMedicamentos.value = medicamentosResponse.data
-        catalogoTiposDieta.value = tiposDietaResponse.data
+        ]
+
+        // If no initial data, fetch dashboard data
+        if (!props.initialData) {
+            promises.unshift(api.get(`/internaciones/${internacionId}/vista-completa`))
+        }
+
+        const responses = await Promise.all(promises)
+
+        let medicamentosRes, tiposDietaRes
+
+        if (props.initialData) {
+            dashboardData.value = props.initialData
+            medicamentosRes = responses[0]
+            tiposDietaRes = responses[1]
+        } else {
+            dashboardData.value = responses[0].data
+            medicamentosRes = responses[1]
+            tiposDietaRes = responses[2]
+        }
+
+        catalogoMedicamentos.value = medicamentosRes.data
+        catalogoTiposDieta.value = tiposDietaRes.data
       } catch (err) {
         error.value = err.response?.data?.message || 'No se pudo conectar con el servidor.'
         Notify.create({ type: 'negative', message: error.value })
@@ -532,6 +660,57 @@ export default defineComponent({
     }
 
     onMounted(fetchData)
+
+    // SUPENSION DIETA
+    function confirmarSuspensionDieta() {
+      Dialog.create({
+        title: 'Confirmar Suspensión',
+        message: '¿Estás seguro de que deseas suspender (finalizar) la dieta actual de este paciente?',
+        cancel: {
+          label: 'Cancelar',
+          color: 'primary',
+          flat: true
+        },
+        persistent: true,
+        ok: {
+          label: 'Suspender',
+          color: 'negative',
+          flat: true
+        }
+      }).onOk(() => {
+        suspenderDieta()
+      })
+    }
+
+    async function suspenderDieta() {
+      const activeDiet = dashboardData.value?.alimentaciones?.find(a => a.estado === 0)
+      if (!activeDiet) return
+
+      try {
+        Loading.show({ message: 'Suspendiendo dieta...' })
+        await api.put(`/alimentaciones/${activeDiet.id}`, {
+          estado: 1 // 1 = Inactivo
+        })
+
+        Notify.create({
+          color: 'positive',
+          message: 'Dieta suspendida correctamente',
+          icon: 'check_circle'
+        })
+
+        await fetchData()
+
+      } catch (error) {
+        console.error('Error al suspender dieta:', error)
+         Notify.create({
+          color: 'negative',
+          message: 'Error al suspender la dieta',
+          icon: 'error'
+        })
+      } finally {
+        Loading.hide()
+      }
+    }
 
     function calcularEdad(fechaNacimiento) {
       if (!fechaNacimiento) return 'N/A'
@@ -721,6 +900,35 @@ export default defineComponent({
       }
     }
 
+    function abrirDialogoCuidado() {
+      cuidadoForm.value = {
+        tipo: 'Indicación Médica',
+        descripcion: '',
+        frecuencia: '',
+      }
+      mostrarDialogoCuidado.value = true
+    }
+
+    async function guardarCuidado() {
+      try {
+        guardandoCuidado.value = true
+        await api.post('/cuidados', {
+          internacion_id: internacionId,
+          ...cuidadoForm.value,
+        })
+        Notify.create({ type: 'positive', message: 'Indicación registrada correctamente' })
+        mostrarDialogoCuidado.value = false
+        await fetchData()
+      } catch (err) {
+        Notify.create({
+          type: 'negative',
+          message: err.response?.data?.message || 'Error al guardar indicación',
+        })
+      } finally {
+        guardandoCuidado.value = false
+      }
+    }
+
     async function darDeAlta() {
       Dialog.create({
         title: 'Dar de Alta al Paciente',
@@ -869,6 +1077,17 @@ export default defineComponent({
       descargarEpicrisis,
       descargarEvolucionClinica,
       onMedicamentoCreado,
+      canEditDiet, // ✅ Exposed for diet button visibility
+      isMedico, // ✅
+      isNutricionista, // ✅
+      confirmarSuspensionDieta, // ✅
+      mostrarDialogoCuidado,
+      abrirDialogoCuidado,
+      guardarCuidado,
+      guardandoCuidado,
+      cuidadoForm,
+      tratamientosActivos,
+      tratamientosInactivos,
     }
   },
 })
@@ -917,56 +1136,10 @@ export default defineComponent({
 }
 
 /* Patient Info Card */
-.patient-info-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e2e8f0;
-  margin-bottom: 32px;
-  overflow: hidden;
-}
-
-.patient-header {
-  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
-  padding: 24px;
+/* Actions Container */
+.actions-container {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.patient-details {
-  flex: 1;
-  min-width: 300px;
-}
-
-.patient-name {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: white;
-  margin-bottom: 12px;
-}
-
-.patient-meta {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 0.9375rem;
-  font-weight: 500;
-}
-
-.status-badge {
-  font-weight: 600;
-  padding: 8px 16px;
+  justify-content: flex-end;
 }
 
 .action-buttons {
@@ -977,7 +1150,7 @@ export default defineComponent({
 
 .action-btn {
   font-weight: 600;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Suavizado */
 }
 
 /* Section Headers */
@@ -1199,6 +1372,19 @@ export default defineComponent({
   color: white;
 }
 
+/* Dialog Styles Custom */
+.dialog-card-small {
+  width: 100%;
+  max-width: 500px;
+  border-radius: 16px;
+  background: white;
+}
+
+.dialog-header-custom {
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%); /* Teal gradient */
+  padding: 16px 24px;
+}
+
 /* Text Strike */
 .text-strike {
   text-decoration: line-through;
@@ -1206,14 +1392,7 @@ export default defineComponent({
 
 /* Responsive */
 @media (max-width: 768px) {
-  .patient-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .patient-name {
-    font-size: 1.5rem;
-  }
+  /* Removed patient-header and patient-name responsive styles as they are no longer used */
 
   .action-buttons {
     flex-direction: column;
@@ -1235,4 +1414,42 @@ export default defineComponent({
     gap: 12px;
   }
 }
+
+/* NEW STYLES FOR ROLE VIEW */
+.role-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.action-btn {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.empty-diet-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  border: 2px dashed #e2e8f0;
+  border-radius: 16px;
+  color: #94a3b8;
+  gap: 16px;
+  background: white;
+}
+
 </style>

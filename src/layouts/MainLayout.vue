@@ -151,6 +151,23 @@
           </q-item-section>
         </q-item>
 
+        <!-- Panel de Nutrición (Nutricionistas) -->
+        <q-item
+          clickable
+          v-ripple
+          to="/nutricion"
+          class="nav-item"
+          active-class="nav-item-active"
+          v-if="userStore.hasPermission('acceso.nutricion')"
+        >
+          <q-item-section avatar>
+            <q-icon name="restaurant" class="nav-icon" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="nav-label">Panel de Nutrición</q-item-label>
+          </q-item-section>
+        </q-item>
+
         <!-- ✅ Mi Internación (Solo PACIENTES) -->
         <q-item
           clickable
@@ -191,7 +208,7 @@
           <span class="title-text">{{ pageTitle }}</span>
         </q-toolbar-title>
         <div class="header-actions">
-          <NotificationBell v-if="userStore.hasPermission('acceso.mis-pacientes')" />
+          <NotificationBell v-if="userStore.hasPermission('acceso.mis-pacientes') || userStore.hasPermission('acceso.nutricion')" />
 
           <q-btn flat round dense icon="account_circle" class="action-btn profile-btn">
             <q-menu anchor="bottom right" self="top right" class="profile-menu">
@@ -271,7 +288,7 @@ const route = useRoute()
 
 const pageTitle = computed(() => route.meta.title || 'Sistema Hospitalario')
 
-const hospitalName = computed(() => userStore.hospital?.nombre || 'Mi Hospital')
+const hospitalName = computed(() => userStore.hospital?.nombre || 'SSTEPI')
 const userName = computed(() =>
   userStore.user ? `${userStore.user.nombre} ${userStore.user.apellidos}` : 'Usuario',
 )

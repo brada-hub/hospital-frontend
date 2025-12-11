@@ -1,237 +1,336 @@
 <template>
-  <q-card flat bordered class="alimentacion-panel-card">
-    <q-card-section class="panel-header">
+  <div class="alimentacion-container">
+    <!-- HEADER -->
+    <div class="header-card">
       <div class="header-content">
-        <div class="header-left">
-          <q-icon name="restaurant" size="28px" color="white" />
-          <div class="header-text">
-            <div class="header-title">Plan de Alimentación</div>
-            <div class="header-subtitle" v-if="alimentacion">
-              {{ alimentacion.tipo_dieta?.nombre }}
-            </div>
-          </div>
+        <div class="header-icon">
+          <q-icon name="restaurant" size="32px" />
         </div>
-
-        <q-btn v-if="alimentacion" icon="more_vert" flat round dense color="white">
-          <q-menu auto-close>
-            <q-list class="menu-list">
-              <q-item clickable @click="onEditClick">
-                <q-item-section avatar>
-                  <q-icon name="edit" color="teal" />
-                </q-item-section>
-                <q-item-section>Modificar Plan</q-item-section>
-              </q-item>
-
-              <q-item clickable @click="onSuspendClick">
-                <q-item-section avatar>
-                  <q-icon name="cancel" color="orange" />
-                </q-item-section>
-                <q-item-section>Suspender Plan</q-item-section>
-              </q-item>
-            </q-list>
-          </q-menu>
-        </q-btn>
+        <div class="header-text">
+          <h2 class="header-title">Plan de Alimentación</h2>
+          <p class="header-subtitle" v-if="alimentacion">
+            {{ alimentacion.tipo_dieta?.nombre }}
+          </p>
+        </div>
       </div>
-    </q-card-section>
+      <q-btn flat round icon="more_vert" color="white" v-if="alimentacion">
+        <q-menu>
+          <q-list style="min-width: 150px">
+            <q-item clickable v-close-popup @click="cargarDatosAlimentacion">
+              <q-item-section avatar><q-icon name="refresh" /></q-item-section>
+              <q-item-section>Actualizar</q-item-section>
+            </q-item>
+          </q-list>
+        </q-menu>
+      </q-btn>
+    </div>
 
-    <q-card-section v-if="cargando" class="loading-section">
-      <q-inner-loading showing color="teal" />
-      <div class="loading-text">Cargando plan y registros...</div>
-    </q-card-section>
+    <!-- LOADING -->
+    <div v-if="cargando" class="loading-container">
+      <q-spinner-dots color="teal" size="60px" />
+      <p class="loading-text">Cargando plan de alimentación...</p>
+    </div>
 
-    <q-card-section v-else-if="!alimentacion" class="empty-section">
-      <q-icon name="restaurant_off" size="80px" color="grey-5" />
-      <div class="empty-text">No hay prescripciones de alimentación activas</div>
-    </q-card-section>
+    <!-- SIN DIETA -->
+    <div v-else-if="!alimentacion" class="empty-state">
+      <q-icon name="no_meals" size="80px" color="grey-5" />
+      <h3 class="empty-title">Sin Plan de Alimentación</h3>
+      <p class="empty-subtitle">No hay prescripciones de alimentación activas para este paciente</p>
+    </div>
 
+    <!-- CONTENIDO PRINCIPAL -->
     <template v-else>
-      <q-card-section class="plan-details">
-        <div class="detail-row">
-          <div class="detail-label">
-            <q-icon name="local_dining" size="20px" />
-            Vía de Administración
+      <!-- INFO DE LA DIETA -->
+      <div class="info-cards-row">
+        <div class="info-card">
+          <div class="info-card-icon bg-teal">
+            <q-icon name="local_dining" color="white" size="24px" />
           </div>
-          <div class="detail-value">{{ alimentacion.via_administracion }}</div>
-        </div>
-        <div class="detail-row" v-if="alimentacion.restricciones">
-          <div class="detail-label">
-            <q-icon name="warning" size="20px" />
-            Restricciones
+          <div class="info-card-content">
+            <span class="info-label">Vía de Administración</span>
+            <span class="info-value">{{ alimentacion.via_administracion }}</span>
           </div>
-          <div class="detail-value">{{ alimentacion.restricciones }}</div>
         </div>
-      </q-card-section>
-
-      <q-separator />
-
-      <q-card-section class="registro-section">
-        <div class="section-title">
-          <q-icon name="add_circle" size="24px" />
-          Registrar Nuevo Consumo (Hoy)
+        <div class="info-card" v-if="alimentacion.restricciones">
+          <div class="info-card-icon bg-orange">
+            <q-icon name="warning" color="white" size="24px" />
+          </div>
+          <div class="info-card-content">
+            <span class="info-label">Restricciones</span>
+            <span class="info-value">{{ alimentacion.restricciones }}</span>
+          </div>
         </div>
+      </div>
 
-        <div class="tiempos-grid">
-          <div v-for="tiempo in alimentacion.tiempos" :key="tiempo.id" class="tiempo-card">
-            <div class="tiempo-header">
-              <div class="tiempo-name">{{ tiempo.tiempo_comida }}</div>
-              <q-icon name="schedule" size="18px" color="teal" />
+      <!-- SECCIÓN DE REGISTRO -->
+      <div class="section-header">
+        <q-icon name="add_circle" color="teal" size="28px" />
+        <span>Registrar Nuevo Consumo (Hoy)</span>
+      </div>
+
+      <!-- GRID DE TIEMPOS DE COMIDA -->
+      <div class="tiempos-grid">
+        <div v-for="tiempo in alimentacion.tiempos" :key="tiempo.id" class="tiempo-card">
+          <!-- CARD HEADER -->
+          <div class="tiempo-card-header">
+            <div class="tiempo-title-row">
+              <q-icon :name="getIconoTiempo(tiempo.tiempo_comida)" size="24px" />
+              <span class="tiempo-title">{{ tiempo.tiempo_comida }}</span>
             </div>
-
-            <div class="tiempo-description">
-              {{ tiempo.descripcion || 'Sin descripción específica' }}
-            </div>
-
-            <div class="slider-container" v-if="inputsNuevos[tiempo.tiempo_comida]">
-              <div class="slider-label">Porcentaje consumido</div>
-              <q-slider
-                v-model="inputsNuevos[tiempo.tiempo_comida].porcentaje_consumido"
-                :min="0"
-                :max="100"
-                :step="25"
-                label-always
-                markers
-                color="teal"
-                class="custom-slider"
-              />
-            </div>
-
-            <q-input
-              v-if="inputsNuevos[tiempo.tiempo_comida]"
-              v-model="inputsNuevos[tiempo.tiempo_comida].observaciones"
-              label="Observaciones"
-              placeholder="Ej: Refiere náuseas, buen apetito..."
-              outlined
-              dense
-              autogrow
-              class="observaciones-input"
-            >
-              <template v-slot:prepend>
-                <q-icon name="notes" />
-              </template>
-            </q-input>
-
-            <q-btn
-              unelevated
-              rounded
-              label="Registrar"
-              color="primary"
-              icon="check_circle"
-              @click="handleGuardarTiempo(tiempo.tiempo_comida)"
-              :loading="guardandoTiempo === tiempo.tiempo_comida"
-              class="register-btn"
+            <q-badge
+              :color="getBadgeColor(tiempo.tiempo_comida)"
+              :label="getHorarioTiempo(tiempo.tiempo_comida)"
+              class="tiempo-badge"
             />
           </div>
-        </div>
-      </q-card-section>
 
-      <q-separator />
+          <!-- DESCRIPCIÓN -->
+          <p class="tiempo-descripcion">
+            {{ tiempo.descripcion || 'Sin descripción específica' }}
+          </p>
 
-      <q-card-section class="historial-section">
-        <div class="section-title">
-          <q-icon name="history" size="24px" />
-          Historial de Registros (Hoy)
-        </div>
+          <!-- SLIDER DE PORCENTAJE -->
+          <div class="slider-section">
+            <div class="slider-label">
+              <span>Porcentaje consumido</span>
+              <q-badge
+                :color="
+                  getPorcentajeColor(inputsNuevos[tiempo.tiempo_comida]?.porcentaje_consumido || 0)
+                "
+                :label="`${inputsNuevos[tiempo.tiempo_comida]?.porcentaje_consumido || 0}%`"
+                class="porcentaje-badge"
+              />
+            </div>
+            <q-slider
+              v-model="inputsNuevos[tiempo.tiempo_comida].porcentaje_consumido"
+              :min="0"
+              :max="100"
+              :step="25"
+              markers
+              marker-labels
+              color="teal"
+              class="custom-slider"
+            />
+          </div>
 
-        <div v-if="historialConsumos.length === 0" class="historial-empty">
-          <q-icon name="event_available" size="48px" color="grey-4" />
-          <div class="historial-empty-text">Aún no hay registros de consumo para hoy.</div>
-        </div>
+          <!-- OBSERVACIONES -->
+          <q-input
+            v-model="inputsNuevos[tiempo.tiempo_comida].observaciones"
+            label="Observaciones"
+            placeholder="Ej: Refiere náuseas, no terminó..."
+            outlined
+            dense
+            autogrow
+            class="obs-input"
+          >
+            <template v-slot:prepend>
+              <q-icon name="notes" color="grey-6" />
+            </template>
+          </q-input>
 
-        <div v-else class="historial-grid">
-          <div v-for="consumo in historialConsumos" :key="consumo.id" class="historial-card">
+          <!-- BOTÓN REGISTRAR -->
+          <q-btn
+            unelevated
+            :label="`Registrar`"
+            icon="check_circle"
+            class="btn-registrar"
+            @click="handleGuardarTiempo(tiempo.tiempo_comida)"
+            :loading="guardandoTiempo === tiempo.tiempo_comida"
+            :disable="!tratamientoIdActual"
+            no-caps
+          />
+
+          <!-- HISTORIAL DEL TIEMPO -->
+          <div
+            class="historial-section"
+            v-if="getConsumosPorTiempo(tiempo.tiempo_comida).length > 0"
+          >
             <div class="historial-header">
-              <q-avatar
-                :color="getPorcentajeColor(consumo.porcentaje_consumido)"
-                text-color="white"
-                size="48px"
-                class="porcentaje-avatar"
-              >
-                {{ consumo.porcentaje_consumido }}%
-              </q-avatar>
+              <q-icon name="history" size="18px" color="grey-7" />
+              <span>Registros de hoy</span>
+              <q-badge color="grey-6" :label="getConsumosPorTiempo(tiempo.tiempo_comida).length" />
+            </div>
 
-              <div class="historial-info">
-                <div class="historial-tiempo">{{ consumo.tiempo_comida }}</div>
-                <div class="historial-fecha">
-                  {{ formatearFechaGuardado(consumo.created_at) }}
+            <div class="historial-list">
+              <div
+                v-for="consumo in getConsumosPorTiempo(tiempo.tiempo_comida)"
+                :key="consumo.id"
+                class="historial-item"
+              >
+                <div class="historial-avatar" :class="getAvatarClass(consumo.porcentaje_consumido)">
+                  {{ consumo.porcentaje_consumido }}%
                 </div>
-                <div class="historial-autor" v-if="consumo.registrado_por">
-                  Por: {{ consumo.registrado_por.nombre }}
+                <div class="historial-info">
+                  <span class="historial-obs" v-if="consumo.observaciones">
+                    {{ consumo.observaciones }}
+                  </span>
+                  <span class="historial-obs text-grey-5" v-else>Sin observaciones</span>
+                  <span class="historial-meta">
+                    {{ formatearFechaGuardado(consumo.created_at) }}
+                    <span v-if="consumo.registrado_por">
+                      · {{ consumo.registrado_por.nombre?.split(' ')[0] }}</span
+                    >
+                  </span>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div class="historial-obs" v-if="consumo.observaciones">
-              <q-icon name="note" size="16px" />
-              {{ consumo.observaciones }}
-            </div>
+          <!-- SIN HISTORIAL -->
+          <div v-else class="no-historial">
+            <q-icon name="schedule" size="20px" color="grey-4" />
+            <span>Sin registros hoy</span>
           </div>
         </div>
-      </q-card-section>
+      </div>
     </template>
-  </q-card>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 const props = defineProps({
-  internacionId: {
-    type: Number,
-    required: true,
-  },
-  tratamientoId: {
-    type: Number,
-    required: true,
-  },
+  internacionId: { type: Number, required: true },
+  tratamientoId: { type: Number, default: null },
 })
 
-const emit = defineEmits(['editRequest'])
 const $q = useQuasar()
-
 const cargando = ref(true)
 const alimentacion = ref(null)
 const guardandoTiempo = ref(null)
 const inputsNuevos = ref({})
 const historialConsumos = ref([])
+const tratamientoIdActual = ref(props.tratamientoId)
 
-const getFechaHoy = () => {
-  return format(new Date(), 'yyyy-MM-dd')
-}
+const getFechaHoy = () => format(new Date(), 'yyyy-MM-dd')
 
 const formatearFechaGuardado = (fecha) => {
   if (!fecha) return ''
-  return format(new Date(fecha), 'dd MMM, hh:mm a', { locale: es })
+  return format(new Date(fecha), 'HH:mm', { locale: es })
 }
 
 const getPorcentajeColor = (porcentaje) => {
-  if (porcentaje <= 30) return 'negative'
-  if (porcentaje <= 70) return 'warning'
+  if (porcentaje <= 25) return 'negative'
+  if (porcentaje <= 50) return 'orange'
+  if (porcentaje <= 75) return 'amber'
   return 'positive'
 }
 
+const getAvatarClass = (porcentaje) => {
+  if (porcentaje <= 25) return 'avatar-red'
+  if (porcentaje <= 50) return 'avatar-orange'
+  if (porcentaje <= 75) return 'avatar-amber'
+  return 'avatar-green'
+}
+
+const getIconoTiempo = (tiempo) => {
+  const iconos = {
+    'Desayuno': 'free_breakfast',
+    'Merienda AM': 'local_cafe',
+    'Almuerzo': 'lunch_dining',
+    'Merienda PM': 'bakery_dining',
+    'Cena': 'dinner_dining',
+  }
+  return iconos[tiempo] || 'restaurant'
+}
+
+const getBadgeColor = (tiempo) => {
+  const colores = {
+    'Desayuno': 'amber-8',
+    'Merienda AM': 'cyan-7',
+    'Almuerzo': 'orange-8',
+    'Merienda PM': 'pink-5',
+    'Cena': 'deep-purple-6',
+  }
+  return colores[tiempo] || 'teal'
+}
+
+const getHorarioTiempo = (tiempo) => {
+  const horarios = {
+    'Desayuno': '07:00 - 09:00',
+    'Merienda AM': '10:00 - 11:00',
+    'Almuerzo': '12:00 - 14:00',
+    'Merienda PM': '16:00 - 17:00',
+    'Cena': '18:00 - 20:00',
+  }
+  return horarios[tiempo] || ''
+}
+
+const getConsumosPorTiempo = (tiempoComida) => {
+  return historialConsumos.value.filter((c) => c.tiempo_comida === tiempoComida)
+}
+
+watch(
+  () => props.tratamientoId,
+  (newId) => {
+    if (newId) {
+      tratamientoIdActual.value = newId
+      cargarDatosAlimentacion()
+    } else {
+      cargarTratamientosYAlimentacion()
+    }
+  },
+)
+
 onMounted(() => {
-  cargarDatosAlimentacion()
+  if (props.tratamientoId) {
+    cargarDatosAlimentacion()
+  } else {
+    cargarTratamientosYAlimentacion()
+  }
 })
+
+const cargarTratamientosYAlimentacion = async () => {
+  cargando.value = true
+  console.log('[PanelAlimentacion] No treatment ID provided, loading treatments...')
+  try {
+    const response = await api.get(`/internaciones/${props.internacionId}`)
+    const internacion = response.data
+    if (internacion.tratamientos && internacion.tratamientos.length > 0) {
+      tratamientoIdActual.value = internacion.tratamientos[0].id
+      console.log('[PanelAlimentacion] Treatment loaded:', tratamientoIdActual.value)
+    } else {
+      console.warn('[PanelAlimentacion] No treatments found for this patient')
+      tratamientoIdActual.value = null
+    }
+    await cargarDatosAlimentacion()
+  } catch (error) {
+    console.error('[PanelAlimentacion] Error loading treatments:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar los tratamientos del paciente',
+    })
+    cargando.value = false
+  }
+}
 
 const cargarDatosAlimentacion = async () => {
   cargando.value = true
   historialConsumos.value = []
   inputsNuevos.value = {}
 
+  console.log('[PanelAlimentacion] Loading food plan...')
+  console.log('  internacionId:', props.internacionId)
+  console.log('  tratamientoId:', tratamientoIdActual.value)
+
   try {
     const responseDieta = await api.get(`/alimentaciones/internacion/${props.internacionId}`)
+    console.log('  Food plan response:', responseDieta.data)
     const dietaActiva = responseDieta.data.find((a) => a.estado === 0)
 
     if (!dietaActiva) {
+      console.warn('  No active food plan found')
       alimentacion.value = null
-      cargando.value = false
       return
     }
 
+    console.log('  Active food plan found:', dietaActiva)
+    console.log('  Meal times:', dietaActiva.tiempos)
     alimentacion.value = dietaActiva
     const fechaHoy = getFechaHoy()
 
@@ -241,44 +340,41 @@ const cargarDatosAlimentacion = async () => {
         observaciones: '',
       }
     }
+    console.log('  Inputs initialized:', inputsNuevos.value)
 
     try {
       const responseConsumos = await api.get(`/consumos/alimentacion/${dietaActiva.id}/${fechaHoy}`)
       historialConsumos.value = responseConsumos.data || []
+      console.log('  Consumptions loaded:', historialConsumos.value.length)
     } catch (loadError) {
-      console.warn('No se pudieron cargar consumos previos:', loadError.message)
+      console.warn('Could not load previous consumptions:', loadError.message)
     }
   } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: 'Error al cargar el plan de alimentación',
-    })
-    console.error('Error cargando la dieta:', error)
+    $q.notify({ type: 'negative', message: 'Error al cargar el plan de alimentación' })
+    console.error('Error loading food plan:', error)
   } finally {
     cargando.value = false
   }
 }
 
 const handleGuardarTiempo = async (tiempoComida) => {
-  guardandoTiempo.value = tiempoComida
+  if (!tratamientoIdActual.value) {
+    $q.notify({
+      type: 'warning',
+      message: 'No hay un tratamiento disponible para registrar',
+    })
+    return
+  }
 
+  guardandoTiempo.value = tiempoComida
   const dataTiempo = inputsNuevos.value[tiempoComida]
   if (!dataTiempo) {
     guardandoTiempo.value = null
     return
   }
 
-  if (dataTiempo.porcentaje_consumido === 0 && !dataTiempo.observaciones) {
-    $q.notify({
-      type: 'warning',
-      message: 'Mueva el slider o añada una observación para registrar.',
-    })
-    guardandoTiempo.value = null
-    return
-  }
-
   const payload = {
-    tratamiento_id: props.tratamientoId,
+    tratamiento_id: tratamientoIdActual.value,
     alimentacion_id: alimentacion.value.id,
     fecha: getFechaHoy(),
     tiempo_comida: tiempoComida,
@@ -286,346 +382,395 @@ const handleGuardarTiempo = async (tiempoComida) => {
     observaciones: dataTiempo.observaciones,
   }
 
+  console.log('[PanelAlimentacion] Saving consumption:', payload)
+
   try {
     const response = await api.post('/consumos/registrar-tiempo', payload)
-    historialConsumos.value.unshift(response.data)
+    console.log('[PanelAlimentacion] Save response:', response.data)
 
-    inputsNuevos.value[tiempoComida] = {
-      porcentaje_consumido: 0,
-      observaciones: '',
-    }
+    historialConsumos.value.unshift(response.data)
+    inputsNuevos.value[tiempoComida] = { porcentaje_consumido: 0, observaciones: '' }
 
     $q.notify({
       type: 'positive',
-      message: `${tiempoComida} registrado exitosamente.`,
+      message: `${tiempoComida} registrado exitosamente`,
       icon: 'check_circle',
     })
   } catch (error) {
-    console.error(`Error al guardar ${tiempoComida}`, error)
+    console.error(`Error saving ${tiempoComida}`, error)
+    console.error('Error details:', error.response?.data)
     $q.notify({
       type: 'negative',
-      message: `Error al guardar ${tiempoComida}.`,
+      message: error.response?.data?.message || `Error al guardar ${tiempoComida}`
     })
   } finally {
     guardandoTiempo.value = null
   }
 }
-
-const onEditClick = () => {
-  if (alimentacion.value) {
-    emit('editRequest', alimentacion.value)
-  }
-}
-
-const onSuspendClick = () => {
-  $q.dialog({
-    title: 'Suspender Plan de Alimentación',
-    message: 'Ingrese el motivo de la suspensión:',
-    prompt: {
-      model: '',
-      type: 'text',
-      isValid: (val) => val.length >= 5 || 'El motivo debe tener al menos 5 caracteres.',
-    },
-    cancel: true,
-    persistent: true,
-  }).onOk(async (motivo) => {
-    await handleSuspender(motivo)
-  })
-}
-
-const handleSuspender = async (motivo) => {
-  if (!alimentacion.value) return
-
-  $q.loading.show({ message: 'Suspendiendo plan...' })
-  try {
-    // FIX: Cambiado de PATCH a POST para coincidir con el backend
-    await api.post(`/alimentaciones/${alimentacion.value.id}/suspender`, {
-      motivo_suspension: motivo,
-    })
-
-    $q.notify({
-      type: 'positive',
-      message: 'Plan de alimentación suspendido correctamente.',
-    })
-
-    cargarDatosAlimentacion()
-  } catch (error) {
-    console.error('Error al suspender la alimentación:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'No se pudo suspender el plan. Intente nuevamente.',
-    })
-  } finally {
-    $q.loading.hide()
-  }
-}
-
-defineExpose({
-  cargarDatosAlimentacion,
-})
 </script>
 
 <style scoped>
-.alimentacion-panel-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
+.alimentacion-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+  min-height: 100%;
 }
 
-.panel-header {
+/* HEADER */
+.header-card {
   background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  border-radius: 16px;
   padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
 }
 
 .header-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left {
-  display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.header-text {
+.header-icon {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px;
   color: white;
 }
 
 .header-title {
-  font-size: 1.25rem;
+  color: white;
+  font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin: 0;
 }
 
 .header-subtitle {
-  font-size: 0.875rem;
-  opacity: 0.95;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  margin: 4px 0 0 0;
 }
 
-.menu-list {
-  min-width: 200px;
-}
-
-.loading-section,
-.empty-section {
+/* LOADING */
+.loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
-  gap: 20px;
+  padding: 80px 20px;
 }
 
-.loading-text,
-.empty-text {
+.loading-text {
   color: #64748b;
-  font-size: 1rem;
+  margin-top: 16px;
+}
+
+/* EMPTY STATE */
+.empty-state {
+  background: white;
+  border-radius: 16px;
+  padding: 60px 24px;
   text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.plan-details {
-  padding: 20px 24px;
-  background: #f8fafc;
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.detail-row:last-child {
-  border-bottom: none;
-}
-
-.detail-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
+.empty-title {
   color: #475569;
-  font-size: 0.9375rem;
+  font-size: 1.25rem;
+  margin: 16px 0 8px;
 }
 
-.detail-value {
-  color: #1e293b;
+.empty-subtitle {
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* INFO CARDS */
+.info-cards-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.info-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 200px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.info-card-icon {
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.info-card-icon.bg-teal {
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+}
+
+.info-card-icon.bg-orange {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+}
+
+.info-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #64748b;
   font-weight: 500;
 }
 
-.registro-section,
-.historial-section {
-  padding: 24px;
+.info-value {
+  display: block;
+  font-size: 1rem;
+  color: #1e293b;
+  font-weight: 600;
 }
 
-.section-title {
+/* SECTION HEADER */
+.section-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 1.125rem;
-  font-weight: 700;
+  gap: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: #0f766e;
   margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #ccfbf1;
 }
 
+/* TIEMPOS GRID */
 .tiempos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 20px;
 }
 
 .tiempo-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  background: white;
+  border-radius: 16px;
   padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
   transition: all 0.3s ease;
 }
 
 .tiempo-card:hover {
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
-.tiempo-header {
+.tiempo-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
 
-.tiempo-name {
-  font-size: 1.125rem;
-  font-weight: 700;
+.tiempo-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   color: #0f766e;
 }
 
-.tiempo-description {
-  font-size: 0.875rem;
-  color: #64748b;
-  margin-bottom: 20px;
-  line-height: 1.5;
+.tiempo-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e293b;
 }
 
-.slider-container {
+.tiempo-badge {
+  font-size: 0.7rem;
+  padding: 4px 10px;
+}
+
+.tiempo-descripcion {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+/* SLIDER */
+.slider-section {
   margin-bottom: 16px;
 }
 
 .slider-label {
-  font-size: 0.875rem;
-  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
   color: #475569;
-  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.porcentaje-badge {
+  font-weight: 700;
+  padding: 4px 10px;
 }
 
 .custom-slider {
-  padding: 16px 4px;
+  padding: 0 8px;
 }
 
-.observaciones-input {
+/* INPUT */
+.obs-input {
   margin-bottom: 16px;
 }
 
-.register-btn {
+/* BOTÓN */
+.btn-registrar {
   width: 100%;
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  color: white;
   font-weight: 600;
-}
-
-.historial-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 40px 20px;
-  text-align: center;
-}
-
-.historial-empty-text {
-  color: #94a3b8;
-  font-size: 0.9375rem;
-  margin-top: 12px;
-}
-
-.historial-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.historial-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(13, 148, 136, 0.25);
   transition: all 0.3s ease;
 }
 
-.historial-card:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+.btn-registrar:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(13, 148, 136, 0.35);
+}
+
+.btn-registrar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* HISTORIAL */
+.historial-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .historial-header {
   display: flex;
-  gap: 16px;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 600;
   margin-bottom: 12px;
 }
 
-.porcentaje-avatar {
+.historial-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.historial-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.historial-item:hover {
+  background: #f1f5f9;
+}
+
+.historial-avatar {
+  min-width: 48px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
   font-weight: 700;
-  font-size: 1rem;
-  flex-shrink: 0;
+  color: white;
+}
+
+.avatar-red {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+.avatar-orange {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+}
+.avatar-amber {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+.avatar-green {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
 }
 
 .historial-info {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-width: 0;
 }
 
-.historial-tiempo {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 4px;
+.historial-obs {
+  font-size: 0.85rem;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.historial-fecha {
-  font-size: 0.8125rem;
-  color: #64748b;
-  margin-bottom: 2px;
-}
-
-.historial-autor {
+.historial-meta {
   font-size: 0.75rem;
   color: #94a3b8;
 }
 
-.historial-obs {
+.no-historial {
+  margin-top: 16px;
+  padding: 16px;
   background: #f8fafc;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  color: #475569;
+  border-radius: 10px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
-  line-height: 1.5;
+  color: #94a3b8;
+  font-size: 0.85rem;
 }
 
+.text-grey-5 {
+  color: #9ca3af;
+}
+
+/* RESPONSIVE */
 @media (max-width: 768px) {
-  .tiempos-grid,
-  .historial-grid {
+  .alimentacion-container {
+    padding: 16px;
+  }
+
+  .header-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .tiempos-grid {
     grid-template-columns: 1fr;
   }
 
-  .detail-row {
+  .info-cards-row {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
   }
 }
 </style>

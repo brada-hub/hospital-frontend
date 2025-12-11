@@ -112,26 +112,66 @@
     <!-- Vista del Panel del Paciente -->
     <div v-else class="panel-container">
       <div class="panel-header">
-        <q-btn
-          flat
-          round
-          dense
-          icon="arrow_back"
-          color="white"
-          size="lg"
-          @click="cerrarPanel"
-          class="back-btn"
-        >
-          <q-tooltip>Volver a la lista</q-tooltip>
-        </q-btn>
-        <div class="panel-title-section">
-          <q-icon name="medical_services" size="32px" color="white" />
-          <div v-if="internacionActual">
+        <div class="header-left">
+          <q-btn
+            flat
+            round
+            dense
+            icon="arrow_back"
+            color="white"
+            size="lg"
+            @click="cerrarPanel"
+            class="back-btn"
+          >
+            <q-tooltip>Volver a la lista</q-tooltip>
+          </q-btn>
+          <div class="panel-title-section">
             <h2 class="panel-title">
               {{ internacionActual.paciente.nombre }}
               {{ internacionActual.paciente.apellidos }}
             </h2>
-            <p class="panel-subtitle">CI: {{ internacionActual.paciente.ci }}</p>
+            <div class="panel-badges">
+              <q-badge color="white" text-color="primary" class="header-badge">
+                <q-icon name="badge" size="14px" class="q-mr-xs" />
+                CI: {{ internacionActual.paciente.ci }}
+              </q-badge>
+              <q-badge color="white" text-color="primary" class="header-badge">
+                <q-icon name="cake" size="14px" class="q-mr-xs" />
+                {{ calcularEdad(internacionActual.paciente.fecha_nacimiento) }} años
+              </q-badge>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <div class="info-card">
+            <div class="info-label">Diagnóstico</div>
+            <div class="info-value text-ellipsis">{{ internacionActual.diagnostico || 'Sin diagnóstico' }}</div>
+          </div>
+
+          <div class="v-divider"></div>
+
+          <div class="antropometria-group">
+             <div class="info-metric">
+              <div class="metric-label">Peso</div>
+              <div class="metric-value">
+                {{ internacionActual.datos_antropometricos?.peso || '---' }}
+              </div>
+            </div>
+            <div class="info-metric">
+              <div class="metric-label">Altura</div>
+              <div class="metric-value">
+                {{ internacionActual.datos_antropometricos?.altura || '---' }}
+              </div>
+            </div>
+            <div class="info-metric">
+              <div class="metric-label">IMC</div>
+              <div class="metric-value">
+                <q-badge :color="getImcColor(internacionActual.datos_antropometricos?.imc)">
+                  {{ internacionActual.datos_antropometricos?.imc || '---' }}
+                </q-badge>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -195,14 +235,9 @@
             <h3>Registro de Alimentación</h3>
           </div>
           <PanelAlimentacion
-            v-if="tratamientoPrincipalId"
             :internacion-id="internacionActual.id"
             :tratamiento-id="tratamientoPrincipalId"
           />
-          <div v-else class="empty-content">
-            <q-icon name="restaurant_menu" size="64px" />
-            <p>No hay un tratamiento activo para registrar alimentación</p>
-          </div>
         </div>
 
         <!-- Pestaña: Plan de Cuidados -->
@@ -434,6 +469,27 @@ function formatDateTime(dateTimeString) {
 }
 
 onMounted(fetchPacientes)
+// Helper Methods
+function getImcColor(imc) {
+  if (!imc) return 'grey'
+  if (imc < 18.5) return 'blue'
+  if (imc < 25) return 'positive'
+  if (imc < 30) return 'warning'
+  return 'negative'
+}
+
+function calcularEdad(fechaNacimiento) {
+  if (!fechaNacimiento) return '?'
+  const hoy = new Date()
+  const nacimiento = new Date(fechaNacimiento)
+  let edad = hoy.getFullYear() - nacimiento.getFullYear()
+  const m = hoy.getMonth() - nacimiento.getMonth()
+  if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
+    edad--
+  }
+  return edad
+}
+
 </script>
 
 <style scoped>
@@ -673,42 +729,120 @@ onMounted(fetchPacientes)
 
 .panel-header {
   background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
-  padding: 24px 32px;
+  padding: 16px 32px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 20px;
   box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
   position: sticky;
   top: 0;
   z-index: 100;
+  color: white;
 }
 
-.back-btn {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.back-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
 .panel-title-section {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
 }
 
 .panel-title {
-  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-size: 1.5rem;
   font-weight: 700;
-  color: white;
   margin: 0;
+  line-height: 1.2;
 }
 
-.panel-subtitle {
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0;
+.panel-badges {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
 }
+
+.header-badge {
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 12px 20px;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+}
+
+.info-card {
+  max-width: 250px;
+}
+
+.info-label, .metric-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+  margin-bottom: 2px;
+}
+
+.info-value {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.v-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.antropometria-group {
+  display: flex;
+  gap: 20px;
+}
+
+.info-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.metric-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.text-ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 1024px) {
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .info-card {
+    flex: 1;
+  }
+}
+
 
 /* Pestañas */
 .tabs-container {
@@ -803,11 +937,12 @@ onMounted(fetchPacientes)
 /* Diálogo */
 .signos-dialog {
   border-radius: 16px;
-  min-width: 600px;
+  width: 100%;
+  max-width: 900px;
 }
 
 .dialog-header {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
   color: white;
   padding: 24px;
 }

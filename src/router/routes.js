@@ -73,6 +73,12 @@ const routes = [
         component: () => import('pages/MiInternacionPage.vue'), // ← Componente diferente
         meta: { permission: 'acceso.mi-internacion', title: 'Mi Internación' },
       },
+      {
+        path: 'nutricion',
+        name: 'Nutricion',
+        component: () => import('pages/NutricionPage.vue'),
+        meta: { permission: 'acceso.nutricion', title: 'Panel de Nutrición' },
+      },
     ],
   },
   {

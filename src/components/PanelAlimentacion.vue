@@ -299,8 +299,9 @@ const cargarTratamientosYAlimentacion = async () => {
       console.log('[PanelAlimentacion] Treatment loaded:', tratamientoIdActual.value)
       await cargarDatosAlimentacion()
     } else {
-      console.warn('[PanelAlimentacion] No treatments found for this patient')
-      cargando.value = false
+      console.warn('[PanelAlimentacion] No treatments found for this patient, but loading food plan anyway')
+      // Continue to load food plan even without treatment
+      await cargarDatosAlimentacion()
     }
   } catch (error) {
     console.error('[PanelAlimentacion] Error loading treatments:', error)

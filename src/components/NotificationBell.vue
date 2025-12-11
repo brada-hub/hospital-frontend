@@ -165,16 +165,28 @@ const handleNotificationClick = async (notif) => {
     }
   }
 
-  // Navigate to patient's internacion panel
+  // Navigate based on user role
   if (notif.internacion_id) {
     try {
       console.log('[v0] Navigating to internacion:', notif.internacion_id)
-      // Adjust the route path according to your router configuration
-      // Common patterns: '/internaciones/:id', '/pacientes/internacion/:id', '/panel-internacion/:id'
-      await router.push({
-        path: '/mis-pacientes',
-        query: { internacion: notif.internacion_id },
-      })
+
+      // Get user role from localStorage
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      const rolNombre = user?.rol?.nombre?.toUpperCase() || ''
+
+      // Nutricionistas go to Panel de Nutrición
+      if (rolNombre === 'NUTRICIONISTA') {
+        await router.push({
+          path: '/nutricion',
+          query: { internacion: notif.internacion_id }
+        })
+      } else {
+        // Médicos, Enfermeras, etc. go to Mis Pacientes
+        await router.push({
+          path: '/mis-pacientes',
+          query: { internacion: notif.internacion_id },
+        })
+      }
     } catch (error) {
       console.error('[v0] Error al navegar:', error)
       Notify.create({

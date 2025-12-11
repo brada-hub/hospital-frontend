@@ -92,21 +92,67 @@
     <!-- Vista del Panel Clínico -->
     <div v-else class="panel-container">
       <div class="panel-header">
-        <q-btn
-          flat
-          round
-          dense
-          icon="arrow_back"
-          color="white"
-          size="lg"
-          @click="cerrarPanel"
-          class="back-btn"
-        >
-          <q-tooltip>Volver a la lista</q-tooltip>
-        </q-btn>
-        <div class="panel-title-section">
-          <q-icon name="medical_services" size="32px" color="white" />
-          <h2 class="panel-title">Panel Clínico del Paciente</h2>
+        <div class="header-left">
+          <q-btn
+            flat
+            round
+            dense
+            icon="arrow_back"
+            color="white"
+            size="lg"
+            @click="cerrarPanel"
+            class="back-btn"
+          >
+            <q-tooltip>Volver a la lista</q-tooltip>
+          </q-btn>
+          <div class="panel-title-section" v-if="internacionActiva">
+            <h2 class="panel-title">
+              {{ internacionActiva.paciente.nombre }}
+              {{ internacionActiva.paciente.apellidos }}
+            </h2>
+             <div class="panel-badges">
+              <q-badge color="white" text-color="primary" class="header-badge">
+                <q-icon name="badge" size="14px" class="q-mr-xs" />
+                CI: {{ internacionActiva.paciente.ci }}
+              </q-badge>
+              <q-badge color="white" text-color="primary" class="header-badge">
+                <q-icon name="cake" size="14px" class="q-mr-xs" />
+                {{ calcularEdad(internacionActiva.paciente.fecha_nacimiento) }} años
+              </q-badge>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-right" v-if="internacionActiva">
+          <div class="info-card">
+            <div class="info-label">Diagnóstico</div>
+            <div class="info-value text-ellipsis">{{ internacionActiva.diagnostico || 'Sin diagnóstico' }}</div>
+          </div>
+
+          <div class="v-divider"></div>
+
+          <div class="antropometria-group">
+            <div class="info-metric">
+              <div class="metric-label">Peso</div>
+              <div class="metric-value">
+                {{ internacionActiva.datos_antropometricos?.peso || '---' }}
+              </div>
+            </div>
+            <div class="info-metric">
+              <div class="metric-label">Altura</div>
+              <div class="metric-value">
+                {{ internacionActiva.datos_antropometricos?.altura || '---' }}
+              </div>
+            </div>
+            <div class="info-metric">
+              <div class="metric-label">IMC</div>
+              <div class="metric-value">
+                <q-badge :color="getImcColor(internacionActiva.datos_antropometricos?.imc)">
+                  {{ internacionActiva.datos_antropometricos?.imc || '---' }}
+                </q-badge>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -114,6 +160,7 @@
         <PanelInternacion
           v-if="internacionSeleccionada"
           :internacion-id="internacionSeleccionada"
+          :initial-data="internacionActiva"
         />
       </div>
     </div>
@@ -121,7 +168,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from 'boot/axios'
 import { Notify } from 'quasar'
@@ -134,12 +181,34 @@ const isLoading = ref(true)
 const mostrarPanel = ref(false)
 const internacionSeleccionada = ref(null)
 
+const internacionActiva = ref(null)
+
 onMounted(() => {
   fetchMisPacientes()
 })
 
+// Helper Methods
+function getImcColor(imc) {
+  if (!imc) return 'grey'
+  if (imc < 18.5) return 'blue'
+  if (imc < 25) return 'positive'
+  if (imc < 30) return 'warning'
+  return 'negative'
+}
+
+function calcularEdad(fechaNacimiento) {
+  if (!fechaNacimiento) return '?'
+  const hoy = new Date()
+  const nacimiento = new Date(fechaNacimiento)
+  let edad = hoy.getFullYear() - nacimiento.getFullYear()
+  const m = hoy.getMonth() - nacimiento.getMonth()
+  if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
+    edad--
+  }
+  return edad
+}
+
 // ✅ WATCHER: Detectar cambios en la URL (para clicks en notificaciones estando ya aquí)
-import { watch } from 'vue'
 
 watch(
   () => route.query.internacion,
@@ -201,8 +270,24 @@ function formatDateTime(dateTimeString) {
   return format(new Date(dateTimeString), 'dd/MM/yyyy HH:mm')
 }
 
-function abrirPanelClinico(internacionId) {
+async function abrirPanelClinico(internacionId) {
   internacionSeleccionada.value = internacionId
+
+  // Cargar datos completos para la cabecera
+  try {
+    const response = await api.get(`/internaciones/${internacionId}/vista-completa`)
+    internacionActiva.value = response.data
+    // Asegurar estructura
+     if (!internacionActiva.value.datos_antropometricos) {
+         internacionActiva.value.datos_antropometricos = {}
+     }
+  } catch (e) {
+    console.error("Error cargando detalles para cabecera", e)
+    // Fallback básico si falla carga completa
+    const basic = internaciones.value.find(i => i.id === internacionId)
+    if (basic) internacionActiva.value = basic
+  }
+
   mostrarPanel.value = true
   // Scroll al inicio de la página
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -211,6 +296,8 @@ function abrirPanelClinico(internacionId) {
 function cerrarPanel() {
   mostrarPanel.value = false
   internacionSeleccionada.value = null
+  internacionActiva.value = null
+  // Recargar la lista de pacientes
   // Recargar la lista de pacientes
   fetchMisPacientes()
 }
@@ -475,14 +562,118 @@ function cerrarPanel() {
 
 .panel-header {
   background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
-  padding: 24px 32px;
+  padding: 16px 32px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 20px;
   box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
   position: sticky;
   top: 0;
   z-index: 100;
+  color: white;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.panel-title-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.panel-badges {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.header-badge {
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 12px 20px;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+}
+
+.info-card {
+  max-width: 250px;
+}
+
+.info-label, .metric-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+  margin-bottom: 2px;
+}
+
+.info-value {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.v-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.antropometria-group {
+  display: flex;
+  gap: 20px;
+}
+
+.info-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.metric-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.text-ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 1024px) {
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .info-card {
+    flex: 1;
+  }
 }
 
 .back-btn {

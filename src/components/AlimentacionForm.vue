@@ -30,7 +30,6 @@
             <q-item v-bind="scope.itemProps">
               <q-item-section>
                 <q-item-label>{{ scope.opt.nombre }}</q-item-label>
-                <q-item-label caption>{{ scope.opt.descripcion }}</q-item-label>
               </q-item-section>
             </q-item>
           </template>
@@ -135,43 +134,32 @@
           </template>
         </q-input>
 
-        <!-- Fechas -->
-        <div class="row q-col-gutter-sm">
-          <div class="col-12 col-md-6">
+        <!-- Duración del Plan -->
+        <div class="row q-col-gutter-sm items-center">
+          <div class="col-12 col-md-4">
             <q-input
-              v-model="form.fecha_inicio"
-              label="Fecha de Inicio"
-              type="datetime-local"
+              v-model.number="form.duracion_dias"
+              label="Duración (días)"
+              type="number"
+              min="1"
+              max="365"
               outlined
               dense
               color="teal"
-              :rules="[
-                (val) => !!val || 'Campo requerido',
-                validarFechaInicio
-              ]"
+              hint="Ej: 7 días, 14 días, 30 días"
+              :rules="[(val) => (val && val >= 1) || 'Mínimo 1 día']"
             >
-                <template v-slot:prepend>
-                <q-icon name="event" color="teal" />
+              <template v-slot:prepend>
+                <q-icon name="date_range" color="teal" />
               </template>
             </q-input>
           </div>
-          <div class="col-12 col-md-6">
-            <q-input
-              v-model="form.fecha_fin"
-              label="Fecha de Fin"
-              type="datetime-local"
-              outlined
-              dense
-              color="teal"
-              :rules="[
-                (val) => !!val || 'Campo requerido',
-                validarFechaFin
-              ]"
-            >
-                <template v-slot:prepend>
-                <q-icon name="event_busy" color="teal" />
-              </template>
-            </q-input>
+          <div class="col-12 col-md-8">
+            <div class="text-caption text-grey-7 q-pa-sm bg-grey-2 rounded-borders">
+              <q-icon name="info" class="q-mr-xs" />
+              <strong>Inicio:</strong> Hoy ({{ fechaHoyFormateada }}) →
+              <strong>Fin:</strong> {{ fechaFinCalculada }}
+            </div>
           </div>
         </div>
 
@@ -186,7 +174,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 
@@ -206,12 +194,12 @@ const $q = useQuasar()
 const loading = ref(false)
 const tiposDieta = ref([])
 
-// Mapeo de frecuencia a tiempos de comida
+// Mapeo de frecuencia a tiempos de comida (deben coincidir con backend validation)
 const tiemposMap = {
-  1: ['Comida Principal'],
+  1: ['Almuerzo'],
   2: ['Desayuno', 'Cena'],
   3: ['Desayuno', 'Almuerzo', 'Cena'],
-  4: ['Desayuno', 'Almuerzo', 'Merienda', 'Cena'],
+  4: ['Desayuno', 'Almuerzo', 'Merienda PM', 'Cena'],
   5: ['Desayuno', 'Merienda AM', 'Almuerzo', 'Merienda PM', 'Cena'],
 }
 
@@ -221,24 +209,33 @@ const form = ref({
   frecuencia_tiempos: props.alimentacion?.frecuencia_tiempos || null,
   restricciones: props.alimentacion?.restricciones || '',
   descripcion: props.alimentacion?.descripcion || '',
-  fecha_inicio: props.alimentacion?.fecha_inicio
-    ? formatDateTimeLocal(props.alimentacion.fecha_inicio)
-    : '',
-  fecha_fin: props.alimentacion?.fecha_fin ? formatDateTimeLocal(props.alimentacion.fecha_fin) : '',
+  duracion_dias: calcularDuracionDias(props.alimentacion) || 7, // Default 7 días
+})
+
+// Calcular duración en días desde fechas existentes
+function calcularDuracionDias(alimentacion) {
+  if (!alimentacion?.fecha_inicio || !alimentacion?.fecha_fin) return null
+  const inicio = new Date(alimentacion.fecha_inicio)
+  const fin = new Date(alimentacion.fecha_fin)
+  const diffTime = Math.abs(fin - inicio)
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+}
+
+// Computed para mostrar fecha de hoy
+const fechaHoyFormateada = computed(() => {
+  const hoy = new Date()
+  return hoy.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+})
+
+// Computed para calcular y mostrar fecha de fin
+const fechaFinCalculada = computed(() => {
+  if (!form.value.duracion_dias) return 'Seleccione duración'
+  const fin = new Date()
+  fin.setDate(fin.getDate() + form.value.duracion_dias)
+  return fin.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
 })
 
 const tiemposComida = ref([])
-
-// Formatear fecha para input datetime-local
-function formatDateTimeLocal(dateString) {
-  const date = new Date(dateString)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day}T${hours}:${minutes}`
-}
 
 async function loadTiposDieta() {
   try {
@@ -284,30 +281,11 @@ function onFrecuenciaChange(newFrecuencia) {
   generarTiemposComida(newFrecuencia)
 }
 
-// Validaciones de Fecha
-function validarFechaInicio(val) {
-  if (!val) return true
-  const fechaInicio = new Date(val)
-  const ahora = new Date()
-  // Restamos 1 minuto para dar margen si es "justo ahora"
-  ahora.setMinutes(ahora.getMinutes() - 1)
-
-  if (fechaInicio < ahora) {
-    return 'La fecha de inicio no puede ser anterior a la actual'
-  }
-  return true
-}
-
-function validarFechaFin(val) {
-  if (!val || !form.value.fecha_inicio) return true
-
-  const fechaInicio = new Date(form.value.fecha_inicio)
-  const fechaFin = new Date(val)
-
-  if (fechaFin <= fechaInicio) {
-    return 'La fecha fin debe ser posterior a la fecha de inicio'
-  }
-  return true
+// Calcular fecha de fin basada en duración en días
+function calcularFechaFin() {
+  const fin = new Date()
+  fin.setDate(fin.getDate() + (form.value.duracion_dias || 7))
+  return fin
 }
 
 const formRef = ref(null)
@@ -346,8 +324,8 @@ async function onSubmit() {
       tiempos: tiemposComida.value,
       restricciones: form.value.restricciones,
       descripcion: form.value.descripcion,
-      fecha_inicio: form.value.fecha_inicio,
-      fecha_fin: form.value.fecha_fin,
+      fecha_inicio: new Date().toISOString(),
+      fecha_fin: calcularFechaFin().toISOString(),
     }
 
     if (props.alimentacion) {
