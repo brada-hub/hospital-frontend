@@ -12,6 +12,7 @@
       </q-card-section>
 
       <q-tabs
+        v-if="!persistent"
         v-model="tab"
         dense
         class="text-grey"
@@ -20,11 +21,11 @@
         align="justify"
         no-caps
       >
-        <q-tab name="profile" icon="person" label="Mis Datos" :disable="persistent" />
+        <q-tab name="profile" icon="person" label="Mis Datos" />
         <q-tab name="password" icon="lock" label="Cambiar Contraseña" />
       </q-tabs>
 
-      <q-separator />
+      <q-separator v-if="!persistent" />
 
       <q-tab-panels v-model="tab" animated>
         <q-tab-panel name="profile" class="q-pa-md">
@@ -57,8 +58,15 @@
         </q-tab-panel>
 
         <q-tab-panel name="password" class="q-pa-md">
+           <!-- Mensaje explicativo si es cambio obligatorio -->
+           <div v-if="persistent" class="text-center q-mb-md text-grey-8">
+             <q-icon name="lock" color="warning" size="md" />
+             <div class="text-weight-bold">Por tu seguridad, debes cambiar tu contraseña.</div>
+           </div>
+
           <q-form @submit.prevent="changePassword" class="q-gutter-md">
             <q-input
+              v-if="!persistent"
               filled
               v-model="passwordForm.current_password"
               label="Contraseña Actual"
@@ -149,8 +157,13 @@ watch(
       loadUserData() // Carga los datos del perfil
       // Resetea el formulario de contraseña por seguridad
       passwordForm.value = { current_password: '', password: '', password_confirmation: '' }
-      // Abre la pestaña correcta que nos indicaron
-      tab.value = props.initialTab
+
+      // ✅ Selección de pestaña
+      if (props.persistent) {
+        tab.value = 'password' // Forzar pestaña password si es obligatorio
+      } else {
+        tab.value = props.initialTab
+      }
     }
   },
 )
